@@ -133,7 +133,24 @@ which also shows how the strokes of a character are joined and split.
    so data file resolution, analysis, matching, candidate rendering, the replay animation, a full
    compositor render pass and a real button click are all exercised without a display.
 
-## 7. Regenerating the reference vectors
+## 7. Native AOT and trimming
+
+The port avoids the usual AOT hazards on purpose:
+
+* no reflection of any kind (no `GetType()`-driven dispatch, no `Activator`, no assembly scanning),
+* no `dynamic`, no runtime code generation, no `System.Linq.Expressions`,
+* JSON is read with `JsonDocument` / `Utf8JsonReader`, never with the reflection based
+  `JsonSerializer`, and the records it produces are plain classes and structs,
+* the base64 decoder is a hand written lookup (see `CompactDataDecoder`), so nothing is delegated to a
+  converter that might reflect over a type,
+* `HanziDataStore.Names` returns a materialized array rather than a lazily projected view.
+
+Both library projects set `IsAotCompatible`, which enables the .NET trim/AOT analyzers for them and
+marks the assemblies as trimmable. CI then proves the result by publishing and *running* native
+binaries: `tools/aot-smoke` (the recognizer, 1.7 MB) and the demo application (full Avalonia, 21 MB)
+under `xvfb-run`. See the "Native AOT and trimming" section of the README for the details.
+
+## 8. Regenerating the reference vectors
 
 ```bash
 cd tools/reference

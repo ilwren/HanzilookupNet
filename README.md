@@ -116,6 +116,43 @@ Preview.ShowCharacter(data, "學");// or: Preview.ShowAnalysis(session.Analysis)
 
 ---
 
+## Native AOT and trimming
+
+Both libraries are written to be safe under `PublishTrimmed` / `PublishAot`: no reflection, no
+`Activator`, no runtime code generation, no `dynamic`, and only the reflection-free corner of
+`System.Text.Json` (`JsonDocument` + `Utf8JsonReader`). Both projects set `IsAotCompatible`, which turns the
+.NET trim/AOT analyzers on for them and marks the assemblies as trimmable.
+
+That is not taken on faith - CI verifies it on every push, in the `native AOT` job:
+
+| What | How | Result |
+| --- | --- | --- |
+| `tools/aot-smoke` — the recognizer, end to end | `dotnet publish -r linux-x64` (AOT), then **run** it | 1.7 MB native binary, all reference-vector anchors assert |
+| `src/HanziLookup.Demo` — the whole Avalonia app | `dotnet publish -r linux-x64 -p:PublishAot=true`, then run it headlessly under `xvfb-run` | 21 MB native binary; the window is built from compiled XAML, the data file loads, a stroke is drawn through the input canvas, candidates are matched and rendered, and the exit code reports the outcome |
+
+The smoke test drives the same code paths the library exposes: `HanziData.Load` (9507 characters,
+469479 packed bytes), `CompactDataDecoder`, `AnalyzedCharacter.FromStrokes`, `Matcher.Match` (score
+`1.0199310536683939` for the single horizontal stroke) plus `MatchOptions.Strict`, `StrokeSkeleton`,
+`HanziDataStore` and `HandwritingSession.RecognizeAsync`.
+
+Publishing your own app as native AOT:
+
+```bash
+dotnet publish src/HanziLookup.Demo -c Release -r linux-x64 -p:PublishAot=true
+```
+
+Two things to keep in mind, both about the *application*, not these libraries:
+
+* XAML stays compiled. `InitializeComponent()` -> `AvaloniaXamlLoader.Load(this)` is rewritten by the
+  Avalonia build task into a direct populate call; loading XAML *at runtime*
+  (`AvaloniaXamlLoader.Load(uri)`, `Avalonia.Markup.Xaml.Loader`) is reflection based and is not
+  AOT-compatible - that is why it is marked `[RequiresUnreferencedCode]`.
+* Prefer compiled bindings (`x:CompileBindings="True"` / `{CompiledBinding}`) over `{Binding}`, and
+  avoid reflection-driven features such as `DataTemplate` type lookup by name. The demo does not rely on
+  either: it wires its UI in code-behind, so it AOT-publishes as is.
+
+---
+
 ## Fidelity to the JavaScript original
 
 The port is a line-by-line translation and is validated against the original implementation:
@@ -154,6 +191,13 @@ instead of failing, and the base64 decoder copes with unpadded input.
   `HanziStrokePreview`（把量化子笔画还原成线段来“模拟显示笔画”，不依赖字体或原始笔迹）。
 * `src/HanziLookup.Demo` —— 演示程序：手写输入、实时骨架/转折点/包围盒、候选列表与候选字骨架预览、宽松度与候选数调节。
 * `tests/HanziLookup.Demo.Tests` —— 在 headless Avalonia 上启动真实窗口的冒烟测试（模拟指针书写、识别、渲染、清除）。
+
+**原生 AOT**：两个类库都不使用反射 / 运行时代码生成（JSON 只用无反射的 `JsonDocument`），并开启了
+`IsAotCompatible`（自动跑裁剪与 AOT 分析器、标记为可裁剪）。CI 每次推送都会实测：把 `tools/aot-smoke`
+以 `PublishAot` 发布成原生程序并运行（1.7 MB，校验参考向量锚点），再把整个演示程序编译成原生二进制，
+在 `xvfb-run` 下用 `--self-check-ui` 跑真实窗口（21 MB，编译期 XAML → 加载数据 → 通过输入画布写字 → 出候选）。
+自己发布：`dotnet publish src/HanziLookup.Demo -c Release -r linux-x64 -p:PublishAot=true`
+（注意：XAML 必须走编译期加载，运行时 `AvaloniaXamlLoader.Load(uri)` 与反射式 `{Binding}` 不属于 AOT 兼容范围）。
 
 运行方式：
 
