@@ -18,6 +18,11 @@
 
     <!-- The controls are plain code (no XAML, no reflection, no bindings), so they are safe to trim. -->
     <IsAotCompatible>true</IsAotCompatible>
+    <!--
+      A new trim/AOT warning is a compatibility regression in the controls, not a style nit,
+      so it fails the build instead of scrolling past.
+    -->
+    <WarningsAsErrors>$(WarningsAsErrors);IL2026;IL2046;IL2055;IL2067;IL2070;IL2072;IL2075;IL2091;IL3050;IL3051</WarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
