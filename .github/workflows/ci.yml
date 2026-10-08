@@ -126,15 +126,18 @@ jobs:
       - name: Run the native recognizer self test
         run: |
           file artifacts/aot-smoke/HanziLookup.AotSmoke
-          ls -l artifacts/aot-smoke/HanziLookup.AotSmoke
+          echo "::notice::native recognizer self test: $(stat -c%s artifacts/aot-smoke/HanziLookup.AotSmoke) bytes"
           tools/ci/run-with-annotations.sh ./artifacts/aot-smoke/HanziLookup.AotSmoke
 
       - name: Publish the demo application as a native binary
         run: >
           dotnet publish src/HanziLookup.Demo/HanziLookup.Demo.csproj -c ${{ env.Configuration }}
-          -r linux-x64 -o artifacts/aot-demo
+          -r linux-x64 -p:PublishAot=true -o artifacts/aot-demo
 
       - name: Run the native demo window (Xvfb)
         # The demo checks itself: it shows the window, draws a stroke through the input canvas,
         # verifies the candidate list and exits with a non-zero code if anything is wrong.
-        run: tools/ci/run-with-annotations.sh timeout 180 xvfb-run -a ./artifacts/aot-demo/HanziLookup.Demo --self-check-ui
+        run: |
+          file artifacts/aot-demo/HanziLookup.Demo
+          echo "::notice::native demo binary: $(stat -c%s artifacts/aot-demo/HanziLookup.Demo) bytes"
+          tools/ci/run-with-annotations.sh timeout 180 xvfb-run -a ./artifacts/aot-demo/HanziLookup.Demo --self-check-ui
