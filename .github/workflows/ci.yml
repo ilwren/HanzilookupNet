@@ -6,8 +6,78 @@ on:
   pull_request:
   workflow_dispatch:
 
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  Configuration: Release
+
 jobs:
-  placeholder:
+  build-and-test:
+    name: build and test
     runs-on: ubuntu-latest
+
     steps:
-      - run: echo "workflow plumbing check"
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install .NET SDKs (net8.0 + net10.0)
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: SDK information
+        run: dotnet --info
+
+      - name: Restore
+        run: |
+          dotnet restore src/HanziLookup/HanziLookup.csproj
+          dotnet restore src/HanziLookup.Avalonia/HanziLookup.Avalonia.csproj
+          dotnet restore src/HanziLookup.Demo/HanziLookup.Demo.csproj
+          dotnet restore tests/HanziLookup.Tests/HanziLookup.Tests.csproj
+
+      - name: Build the recognizer library (net8.0 + net10.0)
+        run: dotnet build src/HanziLookup/HanziLookup.csproj -c ${{ env.Configuration }} --no-restore
+
+      - name: Build the Avalonia control library (net8.0 + net10.0)
+        run: dotnet build src/HanziLookup.Avalonia/HanziLookup.Avalonia.csproj -c ${{ env.Configuration }} --no-restore
+
+      - name: Build the demo application
+        run: dotnet build src/HanziLookup.Demo/HanziLookup.Demo.csproj -c ${{ env.Configuration }} --no-restore
+
+      - name: Build the demo application against net8.0
+        run: >
+          dotnet build src/HanziLookup.Demo/HanziLookup.Demo.csproj -c ${{ env.Configuration }}
+          -p:HanziLookupAppTargetFramework=net8.0
+          --no-restore
+
+      - name: Test
+        run: >
+          dotnet test tests/HanziLookup.Tests/HanziLookup.Tests.csproj -c ${{ env.Configuration }}
+          --no-restore
+          --logger "console;verbosity=normal"
+          --logger "trx;LogFileName=test-results.trx"
+          --results-directory TestResults
+
+      - name: Pack the NuGet packages
+        run: |
+          dotnet pack src/HanziLookup/HanziLookup.csproj -c ${{ env.Configuration }} --no-build -o artifacts
+          dotnet pack src/HanziLookup.Avalonia/HanziLookup.Avalonia.csproj -c ${{ env.Configuration }} --no-build -o artifacts
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: TestResults
+          if-no-files-found: ignore
+
+      - name: Upload packages
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: nuget-packages
+          path: artifacts
+          if-no-files-found: ignore

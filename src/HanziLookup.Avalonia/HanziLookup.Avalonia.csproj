@@ -2,20 +2,28 @@
 
   <PropertyGroup>
     <TargetFrameworks>$(HanziLookupLibraryTargetFrameworks)</TargetFrameworks>
-    <RootNamespace>HanziLookup</RootNamespace>
-    <AssemblyName>HanziLookup</AssemblyName>
+    <RootNamespace>HanziLookup.Avalonia</RootNamespace>
+    <AssemblyName>HanziLookup.Avalonia</AssemblyName>
 
     <!-- NuGet metadata -->
-    <PackageId>HanziLookup</PackageId>
+    <PackageId>HanziLookup.Avalonia</PackageId>
     <Version>1.0.0</Version>
     <Authors>HanziLookupNet contributors</Authors>
-    <Description>C# rewrite of the hanzilookup-js npm package (v1.0.3): offline handwritten Chinese character recognition using sub-stroke matching. Logic compatible with the original HanziLookupJS by Gabor L Ugray.</Description>
-    <PackageTags>hanzi;handwriting;recognition;chinese;stroke;input</PackageTags>
+    <Description>Avalonia controls for HanziLookup: a stroke input canvas (with stroke replay animation and analysis overlay) and a sub-stroke skeleton preview for handwriting recognition candidates.</Description>
+    <PackageTags>avalonia;hanzi;handwriting;recognition;chinese;stroke</PackageTags>
     <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/ilwren/HanzilookupNet</RepositoryUrl>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HanziLookup\HanziLookup.csproj" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" Visible="false" />

@@ -1,0 +1,17 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="HanziLookup.Demo.App"
+             RequestedThemeVariant="Light">
+
+    <Application.Styles>
+        <FluentTheme />
+        <!--
+          Chinese characters need a font that actually contains CJK glyphs; the list is a fallback
+          chain (Windows / macOS / Linux). Set FontFamily locally on a control to override it.
+        -->
+        <Style Selector="TextBlock">
+            <Setter Property="FontFamily" Value="Microsoft YaHei, PingFang SC, Hiragino Sans GB, Noto Sans CJK SC, Source Han Sans SC, WenQuanYi Zen Hei, sans-serif" />
+        </Style>
+    </Application.Styles>
+
+</Application>

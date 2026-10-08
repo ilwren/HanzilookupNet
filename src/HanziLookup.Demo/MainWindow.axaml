@@ -1,0 +1,101 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:hl="using:HanziLookup.Avalonia"
+        mc:Ignorable="d" d:DesignWidth="1160" d:DesignHeight="780"
+        x:Class="HanziLookup.Demo.MainWindow"
+        Title="HanziLookup · C# + Avalonia 12 手写汉字识别演示"
+        Width="1160" Height="780"
+        MinWidth="920" MinHeight="660"
+        Background="#FFF6F7F9">
+
+    <Grid Margin="16" RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*">
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Spacing="4" Margin="0,0,0,12">
+            <TextBlock Text="HanziLookup · 手写汉字识别" FontSize="21" FontWeight="SemiBold" />
+            <TextBlock Text="C# 重写 npm 包 hanzilookup-js 1.0.3（HanziLookupJS / Make Me a Hanzi 数据）· 笔迹在写完后会按子笔画分解并匹配"
+                       FontSize="12" Foreground="#FF5A6572" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <!-- Left: input canvas -->
+        <Border Grid.Row="1" Grid.Column="0" Background="White" CornerRadius="10" Padding="14"
+                BoxShadow="0 2 10 0 #14000000" VerticalAlignment="Top">
+            <StackPanel Spacing="12">
+                <TextBlock Text="在这里手写一个字" FontSize="13" FontWeight="SemiBold" Foreground="#FF3C4450" />
+                <hl:StrokeInputCanvas x:Name="InputCanvas" Width="430" Height="430" HorizontalAlignment="Center" />
+
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                    <Button x:Name="ClearButton" Content="清除" />
+                    <Button x:Name="UndoButton" Content="撤销上一笔" />
+                    <Button x:Name="PlayButton" Content="重放笔画（模拟书写）" />
+                    <Button x:Name="StopButton" Content="停止" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="18" HorizontalAlignment="Center">
+                    <CheckBox x:Name="GuidesCheckBox" Content="米字格" IsChecked="True" />
+                    <CheckBox x:Name="AnalysisCheckBox" Content="显示笔画分析（骨架 / 转折点 / 包围盒）" IsChecked="True" />
+                    <CheckBox x:Name="StrictCheckBox" Content="过滤未比较的候选" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                    <TextBlock Text="宽松度" FontSize="12" VerticalAlignment="Center" Foreground="#FF5A6572" />
+                    <Slider x:Name="LoosenessSlider" Width="190" Minimum="0" Maximum="1" Value="0.15"
+                            TickFrequency="0.05" IsSnapToTickEnabled="False" VerticalAlignment="Center" />
+                    <TextBlock x:Name="LoosenessText" Text="0.15" FontSize="12" Width="34" VerticalAlignment="Center" Foreground="#FF5A6572" />
+                    <TextBlock Text="候选数" FontSize="12" VerticalAlignment="Center" Foreground="#FF5A6572" />
+                    <Slider x:Name="ResultCountSlider" Width="110" Minimum="1" Maximum="20" Value="8"
+                            TickFrequency="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" />
+                    <TextBlock x:Name="ResultCountText" Text="8" FontSize="12" Width="22" VerticalAlignment="Center" Foreground="#FF5A6572" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Right: results -->
+        <Grid Grid.Row="1" Grid.Column="1" Margin="14,0,0,0" RowDefinitions="Auto,Auto,*,Auto">
+
+            <StackPanel Grid.Row="0" Spacing="2">
+                <TextBlock Text="识别结果" FontSize="13" FontWeight="SemiBold" Foreground="#FF3C4450" />
+                <TextBlock Text="得分越高越相似；点击候选可查看它的子笔画骨架。"
+                           FontSize="11" Foreground="#FF7A8391" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <TextBlock Grid.Row="1" x:Name="MetricsText" Margin="0,6,0,6" FontSize="11"
+                       Foreground="#FF7A8391" TextWrapping="Wrap" />
+
+            <Border Grid.Row="2" Background="White" CornerRadius="10" Padding="10" BoxShadow="0 2 10 0 #14000000">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="ResultsPanel" Spacing="6" />
+                </ScrollViewer>
+            </Border>
+
+            <Grid Grid.Row="3" ColumnDefinitions="*,*" Margin="0,14,0,0">
+                <Border Grid.Column="0" Background="White" CornerRadius="10" Padding="10" BoxShadow="0 2 10 0 #14000000">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="输入笔画分析" FontSize="12" FontWeight="SemiBold" Foreground="#FF3C4450" />
+                        <TextBlock Text="红色：分解出的子笔画（骨架）  蓝点：转折点" FontSize="11" Foreground="#FF7A8391" />
+                        <hl:HanziStrokePreview x:Name="InputPreview" Height="180" HorizontalAlignment="Center"
+                                               Width="180" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="10" Margin="12,0,0,0"
+                        BoxShadow="0 2 10 0 #14000000">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="候选字骨架（从数据文件还原）" FontSize="12" FontWeight="SemiBold" Foreground="#FF3C4450" />
+                        <TextBlock Text="不依赖字体：直接把量化后的子笔画还原成线段" FontSize="11" Foreground="#FF7A8391" />
+                        <hl:HanziStrokePreview x:Name="CandidatePreview" Height="180" HorizontalAlignment="Center"
+                                               Width="180" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- Footer -->
+        <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,14,0,0" Background="White"
+                CornerRadius="10" Padding="10,8" BoxShadow="0 2 10 0 #14000000">
+            <TextBlock x:Name="StatusText" FontSize="11" Foreground="#FF5A6572" TextWrapping="Wrap"
+                       Text="正在加载识别数据…" />
+        </Border>
+    </Grid>
+</Window>

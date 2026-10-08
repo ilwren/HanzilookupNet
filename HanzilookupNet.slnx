@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/HanziLookup/HanziLookup.csproj" />
+    <Project Path="src/HanziLookup.Avalonia/HanziLookup.Avalonia.csproj" />
+    <Project Path="src/HanziLookup.Demo/HanziLookup.Demo.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/HanziLookup.Tests/HanziLookup.Tests.csproj" />
+  </Folder>
+</Solution>

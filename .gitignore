@@ -1,0 +1,20 @@
+# Build output
+bin/
+obj/
+artifacts/
+TestResults/
+*.user
+*.suo
+
+# IDEs
+.vs/
+.idea/
+.vscode/
+*.DotSettings.user
+
+# Node (tools/reference uses the original npm package to generate the reference vectors)
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db

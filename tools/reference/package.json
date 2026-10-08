@@ -1,5 +1,14 @@
 {
+  "name": "hanzilookup-reference-generator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Generates the reference vectors that pin the C# port of hanzilookup-js to the behaviour of the original JavaScript implementation.",
+  "type": "module",
+  "scripts": {
+    "generate": "node generate-reference-vectors.mjs --data ../../data/mmah.json --out ../../tests/HanziLookup.Tests/TestData/reference-vectors.json",
+    "generate:medians": "node generate-reference-vectors.mjs --data ../../data/mmah.json --medians ../../third_party/HanziLookupJS/library/data/x-mmah-medians.js --out ../../tests/HanziLookup.Tests/TestData/reference-vectors.json"
+  },
   "dependencies": {
-    "hanzilookup-js": "^1.0.3"
+    "hanzilookup-js": "1.0.3"
   }
 }
