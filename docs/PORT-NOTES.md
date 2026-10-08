@@ -109,6 +109,13 @@ with the user's strokes. `SkeletonTests` asserts that the reconstructed directio
 every reference case stays within one half quantization step of the geometry it was computed from, and
 that all 9507 repository characters expand to exactly `SubStrokeCount` segments.
 
+![Sub-stroke skeletons reconstructed from the packed table](skeleton-reconstruction.png)
+
+The picture above was produced by `tools/preview/render-skeletons.py` (Pillow, no Avalonia involved):
+it applies exactly the arithmetic described in this section to `data/mmah.json`. Each blue line is one
+quantized sub-stroke, the red dot marks where the pen went down and the green dot where it was lifted -
+which also shows how the strokes of a character are joined and split.
+
 ## 6. Test strategy
 
 1. **Reference vectors (the main safety net).** `tools/reference/generate-reference-vectors.mjs` loads
@@ -121,6 +128,10 @@ that all 9507 repository characters expand to exactly `SubStrokeCount` segments.
 3. **Data integrity.** The SHA-256 of the decoded sub-stroke table (469479 bytes) is asserted, so a swapped
    data file cannot silently invalidate the pinned scores.
 4. **Skeleton tests.** Covers the drawing layer described above.
+5. **Headless UI smoke test.** `tests/HanziLookup.Demo.Tests` starts the real `MainWindow` on the headless
+   Avalonia platform and draws a stroke through the input stack (raw pointer events, hit testing, capture),
+   so data file resolution, analysis, matching, candidate rendering, the replay animation, a full
+   compositor render pass and a real button click are all exercised without a display.
 
 ## 7. Regenerating the reference vectors
 
