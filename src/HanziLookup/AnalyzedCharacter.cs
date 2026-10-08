@@ -50,12 +50,11 @@ public sealed class AnalyzedCharacter
     {
         ArgumentNullException.ThrowIfNull(rawStrokes);
 
-        _rawTop = JsMath.MaxSafeInteger;
-        _rawBottom = JsMath.MinSafeInteger;
-        _rawLeft = JsMath.MaxSafeInteger;
-        _rawRight = JsMath.MinSafeInteger;
-
-        GetBoundingRect(rawStrokes);
+        var bounds = GetBoundingRect(rawStrokes);
+        _rawLeft = bounds.Left;
+        _rawTop = bounds.Top;
+        _rawRight = bounds.Right;
+        _rawBottom = bounds.Bottom;
 
         var analyzedStrokes = new List<AnalyzedStroke>(rawStrokes.Count);
         var flattened = new List<SubStroke>();
@@ -131,8 +130,19 @@ public sealed class AnalyzedCharacter
         return new AnalyzedCharacter(list);
     }
 
-    private void GetBoundingRect(IReadOnlyList<IReadOnlyList<StrokePoint>> rawStrokes)
+    /// <summary>
+    /// Calculates the rectangle that bounds all points of all raw strokes. Like the original, the
+    /// accumulation seeds are <c>Number.MAX_SAFE_INTEGER</c> / <c>Number.MIN_SAFE_INTEGER</c>, which
+    /// is what the constructor's clamping turns into the "default" box for empty input.
+    /// </summary>
+    private static (double Left, double Top, double Right, double Bottom) GetBoundingRect(
+        IReadOnlyList<IReadOnlyList<StrokePoint>> rawStrokes)
     {
+        var left = JsMath.MaxSafeInteger;
+        var top = JsMath.MaxSafeInteger;
+        var right = JsMath.MinSafeInteger;
+        var bottom = JsMath.MinSafeInteger;
+
         for (var i = 0; i < rawStrokes.Count; ++i)
         {
             var stroke = rawStrokes[i];
@@ -144,27 +154,29 @@ public sealed class AnalyzedCharacter
             for (var j = 0; j < stroke.Count; ++j)
             {
                 var pt = stroke[j];
-                if (pt.X < _rawLeft)
+                if (pt.X < left)
                 {
-                    _rawLeft = pt.X;
+                    left = pt.X;
                 }
 
-                if (pt.X > _rawRight)
+                if (pt.X > right)
                 {
-                    _rawRight = pt.X;
+                    right = pt.X;
                 }
 
-                if (pt.Y < _rawTop)
+                if (pt.Y < top)
                 {
-                    _rawTop = pt.Y;
+                    top = pt.Y;
                 }
 
-                if (pt.Y > _rawBottom)
+                if (pt.Y > bottom)
                 {
-                    _rawBottom = pt.Y;
+                    bottom = pt.Y;
                 }
             }
         }
+
+        return (left, top, right, bottom);
     }
 
     /// <summary>

@@ -20,8 +20,8 @@ public static class HanziDataStore
 {
     private static readonly ConcurrentDictionary<string, HanziData> Entries = new(StringComparer.Ordinal);
 
-    /// <summary>The names of all registered repositories.</summary>
-    public static IReadOnlyCollection<string> Names => Entries.Keys;
+    /// <summary>The names of all registered repositories (a snapshot of the current keys).</summary>
+    public static IReadOnlyCollection<string> Names => Entries.Keys.ToArray();
 
     /// <summary>Registers (or replaces) a repository under <paramref name="name"/>.</summary>
     public static void Register(string name, HanziData data)
