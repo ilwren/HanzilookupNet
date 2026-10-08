@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(HanziLookupAppTargetFramework)</TargetFramework>
+    <RootNamespace>HanziLookup.AotSmoke</RootNamespace>
+    <AssemblyName>HanziLookup.AotSmoke</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+
+    <!--
+      This project exists to prove - in CI, on every push - that the recognizer library works in a
+      native AOT deployment. It is compiled to a self-contained native binary (no IL, no JIT, no
+      runtime) and then executed; the assertions it makes are the same numbers the reference
+      vectors pin down.
+    -->
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\HanziLookup\HanziLookup.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\data\mmah.json" Link="data/mmah.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

@@ -15,6 +15,16 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/ilwren/HanzilookupNet</RepositoryUrl>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!--
+      The recognizer is written to be trim- and native AOT-safe: it uses no reflection, no runtime
+      code generation and only the reflection-free part of System.Text.Json (JsonDocument). Setting
+      IsAotCompatible turns on the .NET trim/AOT analyzers for this project (so any future reflection
+      shows up as a build warning) and marks the assembly as trimmable, which tells consuming
+      applications that they may safely trim it. tools/aot-smoke both publishes and *runs* it as a
+      native AOT binary on CI.
+    -->
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>

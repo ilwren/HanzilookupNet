@@ -15,6 +15,9 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/ilwren/HanzilookupNet</RepositoryUrl>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- The controls are plain code (no XAML, no reflection, no bindings), so they are safe to trim. -->
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>
