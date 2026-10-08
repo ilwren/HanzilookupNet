@@ -36,9 +36,12 @@ public sealed class CompactDataDecoderTests
     [Fact]
     public void The_decoded_length_is_three_quarters_of_the_input()
     {
-        var bytes = CompactDataDecoder.Decode("EjRWEJq83v");
+        // Twelve base64 characters carry nine whole bytes.
+        Assert.Equal(9, CompactDataDecoder.Decode("EjRWEJq83vAS").Length);
 
-        Assert.Equal(9, bytes.Length);
+        // Ten characters would be 7.5 bytes; the buffer is floor(10 * 0.75) = 7 bytes long, and the
+        // bytes that would fall past its end are dropped, exactly like the typed array of the original.
+        Assert.Equal(7, CompactDataDecoder.Decode("EjRWEJq83v").Length);
     }
 
     [Fact]

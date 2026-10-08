@@ -10,14 +10,17 @@ namespace HanziLookup.Tests;
 /// <summary>Tests for loading, parsing and querying character data.</summary>
 public sealed class HanziDataTests
 {
-    /// <summary>A tiny repository: one character, one sub-stroke with direction 64, length 255 and centre (1, 2).</summary>
+    /// <summary>
+    /// A tiny repository with two one-sub-stroke characters: 一 (direction 64, length 255, centre 1x2) and
+    /// 人, whose single sub-stroke is the second triple of the packed table.
+    /// </summary>
     private const string SmallJson = """
         {
           "chars": [
             ["一", 1, 1, 0],
-            ["人", 2, 3, 3]
+            ["人", 2, 1, 3]
           ],
-          "substrokes": "QP8S////"
+          "substrokes": "QP8SIUNl"
         }
         """;
 
@@ -50,7 +53,7 @@ public sealed class HanziDataTests
         Assert.NotNull(second);
         var secondBytes = data.GetSubStrokeBytes(second.Value).ToArray();
         Assert.Equal(3, secondBytes.Length);
-        Assert.Equal(new byte[] { 0xff, 0xff, 0xff }, secondBytes);
+        Assert.Equal(new byte[] { 0x21, 0x43, 0x65 }, secondBytes);
     }
 
     [Fact]
@@ -67,7 +70,8 @@ public sealed class HanziDataTests
     {
         Assert.Throws<FormatException>(() => HanziData.Parse("{\"substrokes\":\"\"}"));
         Assert.Throws<FormatException>(() => HanziData.Parse("{\"chars\":[[\"一\",1]]}"));
-        Assert.Throws<System.Text.Json.JsonException>(() => HanziData.Parse("not json at all"));
+        // JsonReaderException derives from JsonException on modern runtimes, so accept any of them.
+        Assert.ThrowsAny<System.Text.Json.JsonException>(() => HanziData.Parse("not json at all"));
     }
 
     [Fact]
