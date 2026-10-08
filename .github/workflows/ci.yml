@@ -61,6 +61,12 @@ jobs:
           --logger "trx;LogFileName=test-results.trx"
           --results-directory TestResults
 
+      - name: Report failing tests as annotations
+        # The test log lives on blob storage, which is not reachable from every environment, so
+        # mirror the failures into check-run annotations, which are readable through the REST API.
+        if: failure()
+        run: python3 tools/ci/report-test-failures.py TestResults
+
       - name: Pack the NuGet packages
         run: |
           dotnet pack src/HanziLookup/HanziLookup.csproj -c ${{ env.Configuration }} --no-build -o artifacts
