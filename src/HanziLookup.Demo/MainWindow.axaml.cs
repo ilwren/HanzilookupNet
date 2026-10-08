@@ -1,9 +1,11 @@
 using System;
 using System.Diagnostics;
 using System.Globalization;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
+using Avalonia.Layout;
 using Avalonia.Media;
 using HanziLookup;
 using HanziLookup.Avalonia;
@@ -231,7 +233,7 @@ public partial class MainWindow : Window
                 Text = "还没有候选结果。写几笔试试。",
                 Foreground = Subtle,
                 FontSize = 12,
-                Margin = new Avalonia.Thickness(4)
+                Margin = new Thickness(4)
             });
             CandidatePreview.Clear();
             return;
@@ -259,25 +261,25 @@ public partial class MainWindow : Window
             FontSize = 34,
             Width = 44,
             TextAlignment = TextAlignment.Center,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+            VerticalAlignment = VerticalAlignment.Center
         };
 
         var scoreTrack = new Border
         {
             Width = 170,
             Height = 8,
-            CornerRadius = new Avalonia.CornerRadius(4),
+            CornerRadius = new CornerRadius(4),
             Background = BarTrack,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+            VerticalAlignment = VerticalAlignment.Center
         };
 
         var scoreBar = new Border
         {
             Width = Math.Max(2, 170 * ratio),
             Height = 8,
-            CornerRadius = new Avalonia.CornerRadius(4),
+            CornerRadius = new CornerRadius(4),
             Background = index == 0 ? Accent : new SolidColorBrush(Color.FromRgb(0x7F, 0xB1, 0xE8)),
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left
+            HorizontalAlignment = HorizontalAlignment.Left
         };
         scoreTrack.Child = scoreBar;
 
@@ -288,7 +290,7 @@ public partial class MainWindow : Window
                 : "未比较",
             FontSize = 12,
             Width = 74,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
             Foreground = match.HasFiniteScore ? Subtle : new SolidColorBrush(Color.FromRgb(0xC5, 0x2A, 0x2A))
         };
 
@@ -298,12 +300,12 @@ public partial class MainWindow : Window
             FontSize = 10,
             Width = 96,
             Foreground = Subtle,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+            VerticalAlignment = VerticalAlignment.Center
         };
 
         var content = new StackPanel
         {
-            Orientation = Avalonia.Layout.Orientation.Horizontal,
+            Orientation = Orientation.Horizontal,
             Spacing = 10,
             Children = { glyph, detail, scoreTrack, scoreText }
         };
@@ -311,8 +313,8 @@ public partial class MainWindow : Window
         var row = new Border
         {
             Background = RowBackground,
-            CornerRadius = new Avalonia.CornerRadius(8),
-            Padding = new Avalonia.Thickness(8, 4),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(8, 4),
             Child = content,
             Cursor = new Cursor(StandardCursorType.Hand)
         };
