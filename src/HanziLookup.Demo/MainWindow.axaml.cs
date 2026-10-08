@@ -28,7 +28,6 @@ public partial class MainWindow : Window
     private HanziData? _data;
     private HandwritingSession? _session;
     private CharacterMatch? _selectedMatch;
-    private bool _updatingUi;
 
     /// <summary>Creates the main window.</summary>
     public MainWindow()
@@ -92,7 +91,7 @@ public partial class MainWindow : Window
 
             var value = LoosenessSlider.Value;
             LoosenessText.Text = value.ToString("0.00", CultureInfo.InvariantCulture);
-            if (_session is null || _updatingUi)
+            if (_session is null)
             {
                 return;
             }
@@ -114,7 +113,7 @@ public partial class MainWindow : Window
 
             var value = (int)Math.Round(ResultCountSlider.Value);
             ResultCountText.Text = value.ToString(CultureInfo.InvariantCulture);
-            if (_session is null || _updatingUi)
+            if (_session is null)
             {
                 return;
             }

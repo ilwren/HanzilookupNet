@@ -48,10 +48,10 @@ jobs:
         run: dotnet build src/HanziLookup.Demo/HanziLookup.Demo.csproj -c ${{ env.Configuration }} --no-restore
 
       - name: Build the demo application against net8.0
+        # no --no-restore: the assets file has to be regenerated for the net8.0 target framework
         run: >
           dotnet build src/HanziLookup.Demo/HanziLookup.Demo.csproj -c ${{ env.Configuration }}
           -p:HanziLookupAppTargetFramework=net8.0
-          --no-restore
 
       - name: Test
         run: >
