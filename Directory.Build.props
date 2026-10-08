@@ -1,0 +1,36 @@
+<Project>
+
+  <PropertyGroup>
+    <!--
+      Target frameworks.
+
+      The libraries multi-target net8.0 and net10.0 so the package can be
+      consumed by both the current and the previous LTS line.
+      The executable projects (demo / tests) target a single framework - net10.0
+      by default - because a desktop head and a test host only need one.
+      Override on the command line, e.g.:
+          dotnet build -p:HanziLookupAppTargetFramework=net8.0
+    -->
+    <HanziLookupLibraryTargetFrameworks>net8.0;net10.0</HanziLookupLibraryTargetFrameworks>
+    <HanziLookupAppTargetFramework Condition="'$(HanziLookupAppTargetFramework)' == ''">net10.0</HanziLookupAppTargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!--
+      The port is a line by line translation of JavaScript, so a couple of
+      "unusual" constructs are intentional. Keep noisy-but-harmless analyzers
+      from failing a build on a machine with stricter settings.
+    -->
+    <AnalysisLevel>latest</AnalysisLevel>
+    <NoWarn>$(NoWarn);CS1591;CA1416;CS8981</NoWarn>
+  </PropertyGroup>
+
+</Project>

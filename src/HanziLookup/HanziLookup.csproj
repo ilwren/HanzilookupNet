@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(HanziLookupLibraryTargetFrameworks)</TargetFrameworks>
+    <RootNamespace>HanziLookup</RootNamespace>
+    <AssemblyName>HanziLookup</AssemblyName>
+
+    <!-- NuGet metadata -->
+    <PackageId>HanziLookup</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>HanziLookupNet contributors</Authors>
+    <Description>C# rewrite of the hanzilookup-js npm package (v1.0.3): offline handwritten Chinese character recognition using sub-stroke matching. Logic compatible with the original HanziLookupJS by Gabor L Ugray.</Description>
+    <PackageTags>hanzi;handwriting;recognition;chinese;stroke;input</PackageTags>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/ilwren/HanzilookupNet</RepositoryUrl>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="..\..\docs\PORT-NOTES.md" Pack="true" PackagePath="docs\" Visible="false" />
+  </ItemGroup>
+
+</Project>
