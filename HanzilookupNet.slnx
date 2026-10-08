@@ -6,5 +6,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/HanziLookup.Tests/HanziLookup.Tests.csproj" />
+    <Project Path="tests/HanziLookup.Demo.Tests/HanziLookup.Demo.Tests.csproj" />
   </Folder>
 </Solution>

@@ -70,10 +70,11 @@ def main() -> int:
         print(f"::notice::{totals['total']} tests: {breakdown}")
 
     if not failures:
-        print(
-            "::error::the test step failed but no failing test was recorded in "
-            f"{results_directory}"
-        )
+        if os.environ.get("JOB_STATUS", "success") not in ("success", ""):
+            print(
+                "::error::the test step failed but no failing test was recorded in "
+                f"{results_directory}"
+            )
         return 0
 
     # One compact annotation with every failing test name first: annotation counts can be

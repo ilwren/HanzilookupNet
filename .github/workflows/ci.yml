@@ -37,6 +37,7 @@ jobs:
           dotnet restore src/HanziLookup.Avalonia/HanziLookup.Avalonia.csproj
           dotnet restore src/HanziLookup.Demo/HanziLookup.Demo.csproj
           dotnet restore tests/HanziLookup.Tests/HanziLookup.Tests.csproj
+          dotnet restore tests/HanziLookup.Demo.Tests/HanziLookup.Demo.Tests.csproj
 
       - name: Build the recognizer library (net8.0 + net10.0)
         run: dotnet build src/HanziLookup/HanziLookup.csproj -c ${{ env.Configuration }} --no-restore
@@ -47,12 +48,6 @@ jobs:
       - name: Build the demo application
         run: dotnet build src/HanziLookup.Demo/HanziLookup.Demo.csproj -c ${{ env.Configuration }} --no-restore
 
-      - name: Build the demo application against net8.0
-        # no --no-restore: the assets file has to be regenerated for the net8.0 target framework
-        run: >
-          dotnet build src/HanziLookup.Demo/HanziLookup.Demo.csproj -c ${{ env.Configuration }}
-          -p:HanziLookupAppTargetFramework=net8.0
-
       - name: Test
         run: >
           dotnet test tests/HanziLookup.Tests/HanziLookup.Tests.csproj -c ${{ env.Configuration }}
@@ -61,10 +56,26 @@ jobs:
           --logger "trx;LogFileName=test-results.trx"
           --results-directory TestResults
 
+      - name: Test the demo application (headless Avalonia)
+        run: >
+          dotnet test tests/HanziLookup.Demo.Tests/HanziLookup.Demo.Tests.csproj -c ${{ env.Configuration }}
+          --no-restore
+          --logger "console;verbosity=normal"
+          --logger "trx;LogFileName=demo-test-results.trx"
+          --results-directory TestResults
+
+      - name: Build the demo application against net8.0
+        # no --no-restore: the assets file has to be regenerated for the net8.0 target framework
+        run: >
+          dotnet build src/HanziLookup.Demo/HanziLookup.Demo.csproj -c ${{ env.Configuration }}
+          -p:HanziLookupAppTargetFramework=net8.0
+
       - name: Report failing tests as annotations
         # The test log lives on blob storage, which is not reachable from every environment, so
         # mirror the failures into check-run annotations, which are readable through the REST API.
         if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
         run: python3 tools/ci/report-test-failures.py TestResults
 
       - name: Pack the NuGet packages

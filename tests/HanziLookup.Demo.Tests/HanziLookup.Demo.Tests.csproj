@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(HanziLookupAppTargetFramework)</TargetFramework>
+    <RootNamespace>HanziLookup.Demo.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <!-- Runs the demo window on a headless Avalonia platform, so the smoke test needs no display. -->
+    <PackageReference Include="Avalonia.Headless" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\HanziLookup.Demo\HanziLookup.Demo.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- DataFileLocator also searches the repository layout, but the test output gets its own copy. -->
+    <None Include="..\..\data\mmah.json" Link="data/mmah.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
