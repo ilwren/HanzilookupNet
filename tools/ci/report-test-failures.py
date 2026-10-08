@@ -31,6 +31,7 @@ def escape(text: str) -> str:
 def collect(results_directory: str):
     failures = []
     stacks = []
+    totals = {"total": 0, "Passed": 0, "Failed": 0, "NotExecuted": 0, "Skipped": 0, "other": 0}
     for path in sorted(glob.glob(os.path.join(results_directory, "**", "*.trx"), recursive=True)):
         try:
             root = ET.parse(path).getroot()
@@ -38,7 +39,12 @@ def collect(results_directory: str):
             print(f"::error::could not parse {path}: {escape(str(error))}")
             continue
         for result in root.iter(NS + "UnitTestResult"):
-            if result.get("outcome") != "Failed":
+            outcome = result.get("outcome") or "other"
+            totals["total"] += 1
+            totals[outcome if outcome in totals else "other"] = (
+                (totals[outcome] if outcome in totals else totals["other"]) + 1
+            )
+            if outcome != "Failed":
                 continue
             name = result.get("testName") or "<unknown>"
             message = result.findtext(f"{NS}Output/{NS}ErrorInfo/{NS}Message") or ""
@@ -48,12 +54,20 @@ def collect(results_directory: str):
             if trace:
                 lines = [line.strip() for line in trace.splitlines() if line.strip()]
                 stacks.append((name, " | ".join(lines[:6])[:MAX_MESSAGE]))
-    return failures, stacks
+    return failures, stacks, totals
 
 
 def main() -> int:
     results_directory = sys.argv[1] if len(sys.argv) > 1 else "TestResults"
-    failures, stacks = collect(results_directory)
+    failures, stacks, totals = collect(results_directory)
+
+    if totals["total"]:
+        breakdown = ", ".join(
+            f"{count} {name.lower()}"
+            for name, count in totals.items()
+            if name != "total" and count
+        )
+        print(f"::notice::{totals['total']} tests: {breakdown}")
 
     if not failures:
         print(
