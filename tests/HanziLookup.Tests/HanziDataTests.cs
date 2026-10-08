@@ -71,15 +71,15 @@ public sealed class HanziDataTests
     }
 
     [Fact]
-    public void A_repository_can_be_loaded_from_a_file_and_from_a_stream()
+    public async Task A_repository_can_be_loaded_from_a_file_and_from_a_stream()
     {
         var path = TestPaths.Require(TestPaths.DataFile, "The character data");
 
         var fromFile = HanziData.Load(path);
         Assert.Equal(9507, fromFile.Count);
 
-        using var stream = File.OpenRead(path);
-        var fromStream = HanziData.LoadAsync(stream).GetAwaiter().GetResult();
+        await using var stream = File.OpenRead(path);
+        var fromStream = await HanziData.LoadAsync(stream);
         Assert.Equal(fromFile.Count, fromStream.Count);
         Assert.Equal(fromFile.SubStrokes.Length, fromStream.SubStrokes.Length);
     }

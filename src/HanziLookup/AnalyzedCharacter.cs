@@ -79,7 +79,7 @@ public sealed class AnalyzedCharacter
 
         AnalyzedStrokes = analyzedStrokes;
         SubStrokeCount = subStrokeCount;
-        FlattenedSubStrokes = flattened.ToArray();
+        FlattenedSubStrokeArray = flattened.ToArray();
 
         // JavaScript clamps the bounding rectangle into "sane" values for the empty / out of range cases.
         Top = _rawTop <= 256 ? _rawTop : 0;
@@ -113,9 +113,13 @@ public sealed class AnalyzedCharacter
     public bool IsEmpty => AnalyzedStrokes.Count == 0;
 
     /// <summary>
-    /// All sub-strokes of all strokes in one flat array (the shape the matcher iterates over).
+    /// All sub-strokes of all analysed strokes in one flat list, in the order the matcher compares
+    /// them (stroke by stroke, pivot by pivot).
     /// </summary>
-    internal SubStroke[] FlattenedSubStrokes { get; }
+    public IReadOnlyList<SubStroke> FlattenedSubStrokes => FlattenedSubStrokeArray;
+
+    /// <summary>The flattened sub-strokes as an array; the matcher (same assembly) iterates this one.</summary>
+    internal SubStroke[] FlattenedSubStrokeArray { get; }
 
     /// <summary>Analyzes a set of <see cref="RawStroke"/>s.</summary>
     public static AnalyzedCharacter FromStrokes(IEnumerable<RawStroke> strokes)

@@ -175,7 +175,7 @@ public sealed class Matcher
             }
 
             // Flat format: matching needs this.
-            var inputSubStrokes = analyzedCharacter.FlattenedSubStrokes;
+            var inputSubStrokes = analyzedCharacter.FlattenedSubStrokeArray;
 
             // Some pre-computed looseness magic.
             var strokeCount = analyzedCharacter.AnalyzedStrokes.Count;
