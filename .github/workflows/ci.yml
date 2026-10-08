@@ -127,7 +127,7 @@ jobs:
         run: |
           file artifacts/aot-smoke/HanziLookup.AotSmoke
           ls -l artifacts/aot-smoke/HanziLookup.AotSmoke
-          ./artifacts/aot-smoke/HanziLookup.AotSmoke
+          tools/ci/run-with-annotations.sh ./artifacts/aot-smoke/HanziLookup.AotSmoke
 
       - name: Publish the demo application as a native binary
         run: >
@@ -137,4 +137,4 @@ jobs:
       - name: Run the native demo window (Xvfb)
         # The demo checks itself: it shows the window, draws a stroke through the input canvas,
         # verifies the candidate list and exits with a non-zero code if anything is wrong.
-        run: timeout 180 xvfb-run -a ./artifacts/aot-demo/HanziLookup.Demo --self-check-ui
+        run: tools/ci/run-with-annotations.sh timeout 180 xvfb-run -a ./artifacts/aot-demo/HanziLookup.Demo --self-check-ui

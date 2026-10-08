@@ -51,7 +51,9 @@ internal static class Program
         Check("一 is in the repository", true, one is not null);
         Check("一 packed bytes", "0,180,119",
             string.Join(",", data.GetSubStrokeBytes(one!.Value).ToArray()));
-        Check("missing characters", true, data.Find("無") is null);
+        // 無 is in the repository, 龘 (the largest common character) is not.
+        Check("missing character", true, data.Find("龘") is null);
+        Check("present character", true, data.Find("無") is not null);
 
         Check("decodeCompact, padded", "18,52", string.Join(",", CompactDataDecoder.Decode("EjQ=")));
         Check("decodeCompact, garbage character", "18,52,64",
