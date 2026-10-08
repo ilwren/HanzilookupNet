@@ -18,3 +18,7 @@ node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# Python bytecode from the CI helper scripts
+__pycache__/
+*.pyc
