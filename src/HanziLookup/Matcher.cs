@@ -215,7 +215,13 @@ public sealed class Matcher
                 matchCollector.FileMatch(match);
             }
 
-            return matchCollector.GetMatches();
+            var results = matchCollector.GetMatches();
+            if (!HasUsableMatch(results))
+            {
+                results = MatchWithoutPreFilter(inputSubStrokes, strokeCount, limit, cancellationToken);
+            }
+
+            return results;
         }
     }
 
@@ -302,6 +308,71 @@ public sealed class Matcher
             _matrixDimension = required;
             _scoreMatrix = BuildScoreMatrix(required);
         }
+    }
+
+    /// <summary>
+    /// True when the result contains at least one candidate that was really compared and scored.
+    /// </summary>
+    /// <remarks>
+    /// A list of <c>-Infinity</c> entries is not a result: it means the input was unlike every
+    /// character that got past the filters, and the user is left with nothing to choose from.
+    /// </remarks>
+    private static bool HasUsableMatch(IReadOnlyList<CharacterMatch> results)
+    {
+        for (var i = 0; i < results.Count; ++i)
+        {
+            if (results[i].HasFiniteScore)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Second pass with the pre-filter switched off, used only when the first pass produced nothing
+    /// usable.
+    /// </summary>
+    /// <remarks>
+    /// The stroke-count and sub-stroke-count filters are what make matching over a repository of
+    /// this size fast, but they have a blind spot. At the default looseness a one-stroke input only
+    /// ever looks at one-stroke characters - which is precisely the shape of a character written in
+    /// one continuous drag (连笔): one stroke, many sub-strokes, nothing comparable. The result is an
+    /// empty list, or a list of entries that were never really compared, and "not even a candidate"
+    /// is the worst possible answer, because the only way to get a suggestion is to keep drawing.
+    /// Scanning everything is expensive, so it happens only when the fast path produced nothing
+    /// usable; when the fast path worked, the result is exactly what the original would return.
+    /// </remarks>
+    private IReadOnlyList<CharacterMatch> MatchWithoutPreFilter(
+        SubStroke[] inputSubStrokes,
+        int strokeCount,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        if (limit <= 0 || _characters.Length == 0)
+        {
+            return Array.Empty<CharacterMatch>();
+        }
+
+        var collector = new MatchCollector(limit);
+        EnsureScoreMatrix(inputSubStrokes.Length);
+
+        for (var cix = 0; cix != _characters.Length; ++cix)
+        {
+            if ((cix & 1023) == 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            collector.FileMatch(MatchOne(
+                strokeCount,
+                inputSubStrokes,
+                MaxCharacterSubStrokeCount,
+                _characters[cix]));
+        }
+
+        return collector.GetMatches();
     }
 
     private CharacterMatch MatchOne(

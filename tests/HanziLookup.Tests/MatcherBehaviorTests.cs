@@ -87,6 +87,46 @@ public sealed class MatcherBehaviorTests
             strict.Select(m => m.Character));
     }
 
+    /// <summary>
+    /// Input that nothing passes the pre-filter for must still come back with candidates.
+    /// </summary>
+    /// <remarks>
+    /// At the default looseness a one-stroke input only looks at one-stroke characters. A character
+    /// written in one continuous drag (连笔) is exactly that - one stroke holding a dozen sub-strokes -
+    /// and this repository has no one-stroke character at all, so the fast pass finds nothing that was
+    /// really compared. An empty candidate list is not a usable answer, so the matcher retries
+    /// without the pre-filter.
+    /// </remarks>
+    [Fact]
+    public void Input_the_pre_filter_rejects_outright_still_gets_candidates()
+    {
+        var repository = new HanziData(
+            new[] { new HanziCharacter("鬱", 12, 12, 0), new HanziCharacter("龘", 12, 12, 36) },
+            SyntheticSubStrokes(24));
+        var matcher = new Matcher(repository);
+        var input = new AnalyzedCharacter(new[] { RawStroke.FromPoints((20, 20), (140, 140)) });
+
+        var results = matcher.Match(input, 4);
+
+        Assert.NotEmpty(results);
+        Assert.All(results, match => Assert.True(match.HasFiniteScore));
+        Assert.Contains(results, match => match.Character == "鬱" || match.Character == "龘");
+    }
+
+    /// <summary>A sub-stroke table of <paramref name="count"/> synthetic entries.</summary>
+    private static byte[] SyntheticSubStrokes(int count)
+    {
+        var bytes = new byte[count * 3];
+        for (var i = 0; i < count; ++i)
+        {
+            bytes[i * 3] = (byte)(10 + i * 3);
+            bytes[i * 3 + 1] = (byte)(200 - i * 2);
+            bytes[i * 3 + 2] = (byte)(0x11 + i);
+        }
+
+        return bytes;
+    }
+
     [Fact]
     public void An_empty_input_finds_nothing()
     {
