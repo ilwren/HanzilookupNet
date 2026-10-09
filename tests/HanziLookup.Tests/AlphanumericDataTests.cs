@@ -31,7 +31,7 @@ public sealed class AlphanumericDataTests
         var data = Alphanumeric();
 
         Assert.Equal(72, data.Count);
-        Assert.All(data.Characters, character => Assert.Equal(character.Character.Length, 1));
+        Assert.All(data.Characters, character => Assert.Equal(1, character.Character.Length));
 
         foreach (var expected in new[] { "0", "5", "9", "A", "Z", "a", "z", "+", "/" })
         {
@@ -51,7 +51,6 @@ public sealed class AlphanumericDataTests
 
             for (var i = 0; i < character.SubStrokeCount; ++i)
             {
-                var direction = bytes[i * 3];
                 var length = bytes[i * 3 + 1];
                 var center = bytes[i * 3 + 2];
 
@@ -59,7 +58,6 @@ public sealed class AlphanumericDataTests
                 // match anything; a centre of 0 is the packed format's "no centre".
                 Assert.True(length > 0, $"'{character.Character}' sub-stroke {i} has length 0");
                 Assert.True(center > 0, $"'{character.Character}' sub-stroke {i} has no stored centre");
-                Assert.True(direction < 256);
             }
         }
     }
@@ -197,7 +195,9 @@ public sealed class AlphanumericDataTests
 
         Assert.Equal(chinese.Count + alnum.Count, merged.Count);
         Assert.NotNull(merged.Find("一"));
-        Assert.NotNull(merged.Find("龘"));
+
+        // The last entry of the Chinese table, i.e. the one whose offset moves the most.
+        Assert.NotNull(merged.Find(chinese.Characters[^1].Character));
         Assert.NotNull(merged.Find("A"));
         Assert.NotNull(merged.Find("+"));
     }
@@ -238,7 +238,7 @@ public sealed class AlphanumericDataTests
             new[] { new HanziCharacter("A", 1, 1, 0) },
             new byte[] { 0, 200, 0x77 });
         var second = new HanziData(
-            new[] { new HanziCharacter("A", 1, 1, 0), new HanziCharacter("B", 1, 1, 0) },
+            new[] { new HanziCharacter("A", 1, 1, 0), new HanziCharacter("B", 1, 1, 3) },
             new byte[] { 64, 100, 0x88, 128, 150, 0x99 });
 
         var merged = HanziData.Concat(first, second);

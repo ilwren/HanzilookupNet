@@ -110,10 +110,11 @@ public sealed class StrokePreprocessingTests
 
         var result = StrokePreprocessor.Simplify(points, 2.0);
 
-        // Three points: start, the corner, the end.
+        // Three points: start, the corner, the end.  The corner is the captured point (100, 0.6) -
+        // simplification picks points out of the input, it does not invent them.
         Assert.Equal(3, result.Count);
         Assert.Equal(new StrokePoint(0, 0.6), result[0]);
-        Assert.Equal(new StrokePoint(100, 0), result[1]);
+        Assert.Equal(new StrokePoint(100, 0.6), result[1]);
         Assert.Equal(new StrokePoint(100.6, 50), result[2]);
     }
 
