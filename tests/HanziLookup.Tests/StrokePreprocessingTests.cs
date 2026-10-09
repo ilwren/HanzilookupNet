@@ -236,7 +236,7 @@ public sealed class StrokePreprocessingTests
     /// <summary>
     /// End to end: a hand-written 一 comes back as 一, and the same input without the pipeline does
     /// not - raw it analyses as 15 sub-strokes where the data has one, so the right character is
-    /// filtered out before scoring and it matches 丿, 丶, 乙 instead.
+    /// filtered out before scoring and something unrelated comes back instead.
     /// </summary>
     [Fact]
     public void HandwrittenHorizontalStrokeIsRecognized()
@@ -250,7 +250,11 @@ public sealed class StrokePreprocessingTests
             5);
 
         Assert.Equal("一", preprocessed[0].Character);
-        Assert.Equal(new[] { "丿", "丶", "乙", "乚", "乛" }, raw.Select(match => match.Character));
+
+        // The raw samples do not find 一 - and they used to find nothing usable at all, which is the
+        // worse failure: the matcher now always answers with something, so what matters here is that
+        // the answer is wrong.
+        Assert.DoesNotContain("一", raw.Select(match => match.Character));
     }
 
     /// <summary>人 - two strokes, one corner: 31 raw sub-strokes, 2 after the pipeline.</summary>
