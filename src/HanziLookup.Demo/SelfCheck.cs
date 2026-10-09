@@ -99,11 +99,13 @@ internal static class SelfCheck
             session?.Analysis is { StrokeCount: 1 },
             $"{session?.Analysis?.SubStrokeCount ?? 0} sub-strokes",
             ref failures);
-        Report(
-            "candidates matched",
-            session is { Results.Count: > 0 },
-            session is null ? "no session" : $"best: {session.Results[0]}",
-            ref failures);
+
+        // The window does not recognize on every stroke (that would be a match run per point while
+        // the pen is still down); the self-check asks for the match the same way the UI does when it
+        // settles.
+        session?.Recognize();
+        var best = session is null || session.Results.Count == 0 ? "no session" : $"best: {session.Results[0]}";
+        Report("candidates matched", session is { Results.Count: > 0 }, best, ref failures);
         Report(
             "candidates rendered",
             window.GetControl<StackPanel>("ResultsPanel").Children.Count > 0,

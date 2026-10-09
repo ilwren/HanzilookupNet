@@ -172,6 +172,16 @@ public partial class MainWindow : Window
             }
         };
 
+        // Lifting the pen is when a character is finished, so that is when the match runs - not on
+        // every point, and not after a timer the user cannot see.
+        InputCanvas.StrokeCompleted += (_, _) =>
+        {
+            if (_session is { HasStrokes: true })
+            {
+                _session.Recognize();
+            }
+        };
+
         InputCanvas.PlaybackCompleted += (_, _) =>
             MetricsText.Text = "笔画重放完成（这就是“模拟书写”：逐点重绘捕获到的轨迹）。";
 
