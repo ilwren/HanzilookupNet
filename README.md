@@ -176,9 +176,15 @@ session.Preprocessing = StrokePreprocessingOptions.Default with { SimplifyEpsilo
 
 | | top-1 | top-5 |
 | --- | --- | --- |
-| Chinese characters written with variable speed, tremor, rotation and scale error, **without** the pipeline | 0% | 0% |
-| the same, with `StrokePreprocessingOptions.Default` | see [`tools/data/evaluate.py`](tools/data/evaluate.py) | |
+| Chinese characters written with variable speed, tremor, rotation and scale error, **without** the pipeline | 0.2% | 2.5% |
+| the same, with `StrokePreprocessingOptions.Default`, against all **9507** characters | 81.3% | |
+| the same, against a 550-character repository | 96.2% | 98.8% |
 | the 72 digits / letters / punctuation of `data/alnum.json`, 3 samples each | 95.4% | 100% |
+
+The two Chinese rows are the same input, different question. Recognizing *that the input is a character*
+is close to solved (96% top-1 against a small repository); what remains is telling 9507 similar-looking
+Chinese characters apart, where a few degrees of tremor in a 16-sub-stroke character is enough to prefer
+一 over 干. That is where further work belongs - not in the preprocessing.
 
 The numbers are measured, not estimated: `tools/data/evaluate.py` and `tools/data/check_alnum.py` write
 characters the way a hand would and report what comes back, and the latter runs in CI on every push.

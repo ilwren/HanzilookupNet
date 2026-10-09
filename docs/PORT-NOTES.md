@@ -129,11 +129,22 @@ Measured with `tools/data/evaluate.py` and `tools/data/check_alnum.py`, which wr
 pointing device would (variable speed, correlated tremor, rotation, scale error) and report top-1 / top-5
 accuracy with and without the pipeline:
 
-| Input | top-1 | top-5 |
+Two numbers matter and they are not the same thing: how well the input is recognized *at all* is
+measured against a small repository, and how often the right character comes *first* is measured
+against all 9507.
+
+| Measurement | top-1 | top-5 |
 | --- | --- | --- |
-| 9507 Chinese characters, median strokes fed straight back | 0% | 0% |
-| the same, through `StrokePreprocessingOptions.Default` | see `tools/data/evaluate.py` | |
-| the 72 alphanumeric glyphs (3 samples each) | 95.4% | 100% |
+| 80 sampled characters against a 550-character repository (jitter 1.6, speed 4) | 96.2% | 98.8% |
+| the same input against **all 9507** characters | 81.3% | |
+| the same characters, **without** the pipeline | 0.2% | 2.5% |
+| the 72 alphanumeric glyphs, 3 simulated handwritings each | 95.4% | 100% |
+
+The difference between the first two rows is the interesting one: recognizing that the input *is* a
+character is nearly solved (96% top-1, 98.8% top-5), and what is left is telling 9507 similar-looking
+Chinese characters apart, where a handful of degrees of tremor in a 16-sub-stroke character is enough to
+prefer 一 over 干. Raw input is 0.2% - a single straight stroke analyses as 136 sub-strokes where the data
+has 9, so the stroke-count filter throws the right character away before a single score is computed.
 
 The tremor model matters as much as the parameters, and getting it wrong is easy: adding *white* noise to
 every sample - which is what a first version of the evaluator did - produces a polyline whose direction
