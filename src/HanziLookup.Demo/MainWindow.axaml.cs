@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -17,6 +18,13 @@ namespace HanziLookup.Demo;
 /// sub-stroke skeleton previews (the analysis of the input and the skeleton of the selected
 /// candidate) at the bottom right.
 /// </summary>
+/// <remarks>
+/// Three character repositories can be selected: the 9507 Chinese characters, the 72 digits / Latin
+/// letters / punctuation, or both merged into one (<see cref="HanziData.Concat"/>).  The case
+/// preference exists because the recognizer normalizes every character by its own bounding box -
+/// <c>c</c> and <c>C</c> are therefore literally the same geometry and cannot be told apart from the
+/// stroke shape; the user decides which one was meant, the same way a shift key would.
+/// </remarks>
 public partial class MainWindow : Window
 {
     private static readonly IBrush Accent = new SolidColorBrush(Color.FromRgb(0x15, 0x65, 0xC0));
@@ -25,9 +33,29 @@ public partial class MainWindow : Window
     private static readonly IBrush SelectedBackground = new SolidColorBrush(Color.FromRgb(0xE3, 0xF0, 0xFD));
     private static readonly IBrush BarTrack = new SolidColorBrush(Color.FromRgb(0xE8, 0xEA, 0xED));
 
+    private HanziData? _chinese;
+    private HanziData? _alphanumeric;
     private HanziData? _data;
     private HandwritingSession? _session;
     private CharacterMatch? _selectedMatch;
+    private CasePreference _case = CasePreference.AsMatched;
+    private string _dataSummary = string.Empty;
+
+    /// <summary>Which repository the matcher searches.</summary>
+    private enum CharacterSet
+    {
+        Chinese,
+        Alphanumeric,
+        All,
+    }
+
+    /// <summary>How a matched Latin letter is reported.</summary>
+    private enum CasePreference
+    {
+        AsMatched,
+        Upper,
+        Lower,
+    }
 
     /// <summary>Creates the main window.</summary>
     public MainWindow()
@@ -76,6 +104,25 @@ public partial class MainWindow : Window
             }
 
             _session.Options = StrictCheckBox.IsChecked == true ? MatchOptions.Strict : MatchOptions.JavaScriptCompatible;
+            if (_session.HasStrokes)
+            {
+                _session.Recognize();
+            }
+        };
+
+        // Turning this off feeds the analyzer the raw pointer samples. It is worth being able to see
+        // the difference: the same stroke then usually produces an order of magnitude more sub-strokes
+        // than the character data has, and nothing matches.
+        SmoothCheckBox.IsCheckedChanged += (_, _) =>
+        {
+            if (_session is null)
+            {
+                return;
+            }
+
+            _session.Preprocessing = SmoothCheckBox.IsChecked == true
+                ? StrokePreprocessingOptions.Default
+                : null;
             if (_session.HasStrokes)
             {
                 _session.Recognize();
@@ -140,12 +187,12 @@ public partial class MainWindow : Window
 
     private void LoadCharacterData()
     {
-        var path = DataFileLocator.Resolve();
-        if (path is null)
+        var chinesePath = DataFileLocator.Resolve(DataFileLocator.ChineseFileName);
+        if (chinesePath is null)
         {
             StatusText.Text =
-                "未找到识别数据 data/mmah.json。请从 HanziLookupJS 仓库取得 mmah.json 并放到 data/ 目录，" +
-                "或放到程序输出目录的 data/ 子目录下。";
+                "未找到识别数据 data/mmah.json。请从 HanziLookupJS 仓库取得 mmah.json 并放到 data/ 目录，"
+                + "或放到程序输出目录的 data/ 子目录下。";
             SetInteractionEnabled(false);
             return;
         }
@@ -153,28 +200,162 @@ public partial class MainWindow : Window
         try
         {
             var stopwatch = Stopwatch.StartNew();
-            _data = HanziData.Load(path);
+            _chinese = HanziData.Load(chinesePath);
             stopwatch.Stop();
 
-            _session = new HandwritingSession(_data, Matcher.DefaultLooseness, (int)ResultCountSlider.Value);
-            _session.RecognitionCompleted += OnRecognitionCompleted;
-            _session.Changed += OnSessionChanged;
-
-            InputCanvas.Session = _session;
-            InputPreview.Data = _data;
-            CandidatePreview.Data = _data;
-
-            StatusText.Text = string.Format(
+            _dataSummary = string.Format(
                 CultureInfo.InvariantCulture,
-                "数据：{0} 个字符（{1}）· 加载用时 {2:0} ms · 用鼠标 / 触控笔 / 手指在左侧方格里写字，抬笔即识别。",
-                _data.Count,
-                System.IO.Path.GetFileName(path),
+                "汉字 {0} 个字符（{1}，加载 {2:0} ms）",
+                _chinese.Count,
+                DataFileLocator.ChineseFileName,
                 stopwatch.Elapsed.TotalMilliseconds);
+
+            var alnumPath = DataFileLocator.Resolve(DataFileLocator.AlphanumericFileName);
+            if (alnumPath is not null)
+            {
+                try
+                {
+                    _alphanumeric = HanziData.Load(alnumPath);
+                    _dataSummary += string.Format(
+                        CultureInfo.InvariantCulture,
+                        " · 数字与字母 {0} 个字符（{1}）",
+                        _alphanumeric.Count,
+                        DataFileLocator.AlphanumericFileName);
+                }
+                catch (Exception ex)
+                {
+                    _alphanumeric = null;
+                    _dataSummary += string.Format(
+                        CultureInfo.InvariantCulture,
+                        " · {0} 加载失败（{1}），已忽略",
+                        DataFileLocator.AlphanumericFileName,
+                        ex.GetType().Name);
+                }
+            }
+            else
+            {
+                _dataSummary += $" · 未找到 {DataFileLocator.AlphanumericFileName}，只识别汉字";
+            }
+
+            PopulateSelectors();
+            SelectCharacterSet(CharacterSet.Chinese);
         }
         catch (Exception ex)
         {
             StatusText.Text = $"加载识别数据失败：{ex.GetType().Name}: {ex.Message}";
             SetInteractionEnabled(false);
+        }
+    }
+
+    private void PopulateSelectors()
+    {
+        CharacterSetBox.Items.Clear();
+        CharacterSetBox.Items.Add(new ComboBoxItem { Content = "汉字", Tag = CharacterSet.Chinese });
+        if (_alphanumeric is not null)
+        {
+            CharacterSetBox.Items.Add(new ComboBoxItem { Content = "数字 · 字母 · 标点", Tag = CharacterSet.Alphanumeric });
+            CharacterSetBox.Items.Add(new ComboBoxItem { Content = "全部（汉字 + 数字字母）", Tag = CharacterSet.All });
+        }
+
+        CharacterSetBox.SelectedIndex = 0;
+
+        CaseBox.Items.Clear();
+        CaseBox.Items.Add(new ComboBoxItem { Content = "自动", Tag = CasePreference.AsMatched });
+        CaseBox.Items.Add(new ComboBoxItem { Content = "大写 A-Z", Tag = CasePreference.Upper });
+        CaseBox.Items.Add(new ComboBoxItem { Content = "小写 a-z", Tag = CasePreference.Lower });
+        CaseBox.SelectedIndex = 0;
+    }
+
+    private void OnCharacterSetChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (CharacterSetBox.SelectedItem is ComboBoxItem { Tag: CharacterSet set })
+        {
+            SelectCharacterSet(set);
+        }
+    }
+
+    private void OnCaseChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (CaseBox.SelectedItem is ComboBoxItem { Tag: CasePreference preference })
+        {
+            _case = preference;
+            if (_session is { HasStrokes: true })
+            {
+                // Only the rendering depends on the case, but re-running keeps one code path.
+                RenderResults(_session.Results);
+            }
+            else
+            {
+                ResultsPanel.Children.Clear();
+                CandidatePreview.Clear();
+            }
+        }
+    }
+
+    private void SelectCharacterSet(CharacterSet set)
+    {
+        var data = set switch
+        {
+            CharacterSet.Chinese => _chinese,
+            CharacterSet.Alphanumeric => _alphanumeric,
+            _ => _chinese is null || _alphanumeric is null
+                ? _chinese
+                : HanziData.Concat(_chinese, _alphanumeric),
+        };
+
+        if (data is null)
+        {
+            return;
+        }
+
+        // Keep what is on the canvas.  Strokes are stored exactly as drawn; the preprocessing
+        // pipeline runs at analysis time, so switching repositories needs no conversion.
+        var strokes = _session?.Strokes.ToArray() ?? Array.Empty<RawStroke>();
+
+        var session = new HandwritingSession(data, Matcher.DefaultLooseness, (int)ResultCountSlider.Value)
+        {
+            Preprocessing = SmoothCheckBox.IsChecked == true ? StrokePreprocessingOptions.Default : null,
+            Options = StrictCheckBox.IsChecked == true ? MatchOptions.Strict : MatchOptions.JavaScriptCompatible,
+        };
+        session.Matcher.Looseness = LoosenessSlider.Value;
+        session.AutoRecognize = false;
+        foreach (var stroke in strokes)
+        {
+            session.AddStroke(stroke);
+        }
+
+        if (_session is not null)
+        {
+            _session.RecognitionCompleted -= OnRecognitionCompleted;
+            _session.Changed -= OnSessionChanged;
+        }
+
+        _session = session;
+        _session.RecognitionCompleted += OnRecognitionCompleted;
+        _session.Changed += OnSessionChanged;
+        _data = data;
+
+        InputCanvas.Session = session;
+        InputPreview.Data = data;
+        CandidatePreview.Data = data;
+        _selectedMatch = null;
+
+        if (session.HasStrokes)
+        {
+            session.Recognize();
+        }
+        else
+        {
+            ResultsPanel.Children.Clear();
+            CandidatePreview.Clear();
+            MetricsText.Text = string.Empty;
+            if (session.Analysis is { } analysis && !analysis.IsEmpty)
+            {
+                InputPreview.ShowAnalysis(analysis);
+            }
+
+            StatusText.Text = _dataSummary
+                + " · 用鼠标 / 触控笔 / 手指在左侧方格里写字，抬笔即识别。";
         }
     }
 
@@ -187,6 +368,9 @@ public partial class MainWindow : Window
         LoosenessSlider.IsEnabled = enabled;
         ResultCountSlider.IsEnabled = enabled;
         StrictCheckBox.IsEnabled = enabled;
+        SmoothCheckBox.IsEnabled = enabled;
+        CharacterSetBox.IsEnabled = enabled;
+        CaseBox.IsEnabled = enabled;
     }
 
     private void OnSessionChanged(object? sender, EventArgs e)
@@ -256,7 +440,7 @@ public partial class MainWindow : Window
 
         var glyph = new TextBlock
         {
-            Text = match.Character,
+            Text = ApplyCase(match.Character),
             FontSize = 34,
             Width = 44,
             TextAlignment = TextAlignment.Center,
@@ -325,10 +509,11 @@ public partial class MainWindow : Window
     private void SelectCandidate(CharacterMatch match, Border? row)
     {
         _selectedMatch = match;
+        var shown = ApplyCase(match.Character);
 
         if (_data is not null)
         {
-            CandidatePreview.ShowCharacter(_data, match.Character);
+            CandidatePreview.ShowCharacter(_data, shown);
         }
 
         foreach (var child in ResultsPanel.Children)
@@ -346,17 +531,44 @@ public partial class MainWindow : Window
 
         if (_selectedMatch is not null && _session?.Analysis is { } analysis)
         {
-            var entry = _data?.Find(match.Character);
+            var entry = _data?.Find(shown);
             var subStrokes = entry?.SubStrokeCount;
             StatusText.Text = string.Format(
                 CultureInfo.InvariantCulture,
-                "候选「{0}」：{1} 笔 / {2} 个子笔画（输入：{3} 笔 / {4} 个子笔画）· 数据文件：{5} 个字符",
-                match.Character,
+                "候选「{0}」：{1} 笔 / {2} 个子笔画（输入：{3} 笔 / {4} 个子笔画）· 当前字符集 {5} 个字符",
+                shown,
                 entry?.StrokeCount ?? 0,
                 subStrokes ?? 0,
                 analysis.StrokeCount,
                 analysis.SubStrokeCount,
                 _data?.Count ?? 0);
         }
+    }
+
+    /// <summary>
+    /// Applies the case preference to a Latin letter. Chinese characters and punctuation are
+    /// returned unchanged.
+    /// </summary>
+    private string ApplyCase(string character)
+    {
+        if (_case == CasePreference.AsMatched || character.Length != 1)
+        {
+            return character;
+        }
+
+        var c = character[0];
+        if (!char.IsAsciiLetter(c))
+        {
+            return character;
+        }
+
+        var converted = _case switch
+        {
+            CasePreference.Upper => char.ToUpperInvariant(c),
+            CasePreference.Lower => char.ToLowerInvariant(c),
+            _ => c,
+        };
+
+        return converted.ToString();
     }
 }

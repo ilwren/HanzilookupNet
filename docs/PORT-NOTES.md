@@ -86,6 +86,65 @@ the decoder total instead of producing an index-out-of-range exception.
 | 3 | `CompactDataDecoder` accepts input whose length is not a multiple of four; the original throws (`new ArrayBuffer(2.25)`). | Robustness for data embedded/trimmed by hand; the shipped data is unaffected. |
 | 4 | `Matcher.MatchAsync` runs the scan on a thread pool thread and polls a `CancellationToken` every 1024 characters. | The matching scan is CPU bound (milliseconds to tens of milliseconds for the full data set) and a UI thread should not block on it. |
 | 5 | Everything is strongly typed and validated: null checks, a typed exception for malformed data, `MatcherCounters` as a value type. | Idiomatic C#; no behaviour change. |
+| 6 | `StrokePreprocessor` and `HandwritingSession.Preprocessing` exist, and are **on by default**. They rewrite the captured polyline before it is analysed. | The ported algorithm is unchanged and still used verbatim; this is an input stage in front of it (section 4a). A pointing device reports fast, unevenly sampled, shaky input, which the analyzer - which assumes the evenly sampled median strokes of `mmah.json` - turns into 100+ sub-strokes per character. Without it, nothing recognisable is ever drawn. |
+| 7 | `HandwritingSession.Strokes` holds exactly what was drawn, and preprocessing happens when the analysis is built, not when a stroke arrives. | Re-processing after every change would be wasted work, and callers who want the raw input (playback, export, the analysis overlay) should not have to fight the session for it. |
+| 8 | `data/alnum.json` - 72 digits, Latin letters and punctuation - ships next to `mmah.json`, and `HanziData.Concat` merges the two. | The matcher normalizes each character by its own bounding box and has no notion of script, so a second repository is all that is needed to recognize digits and letters; merging is just a table concatenation with re-based offsets. |
+
+## 4a. The preprocessing layer: making real handwriting look like the data
+
+`mmah.json` stores *median* strokes: clean polylines with evenly spaced points. A mouse, a finger or a
+stylus reports something else. The same horizontal line, drawn by a hand, arrives as
+
+* points at wildly uneven distances - fast where the hand is confident, slow where it hesitates,
+* displaced by tremor,
+* rotated by a few degrees and scaled by a few percent.
+
+`AnalyzedCharacter` cuts a stroke into sub-strokes by comparing the path length through three
+consecutive samples with the straight distance between the outer two, and declares a *pivot* when the
+local length exceeds 1.1 × that distance (or the running length exceeds 1.09 × the distance from the
+first point). Uneven sampling therefore produces pivots that are not there: one straight stroke
+analyses as 137 sub-strokes where the data has 16, every candidate is filtered out before scoring, and
+the input matches 丿 or 乙 instead of 一. Tremor has the same effect, one order of magnitude smaller.
+
+`StrokePreprocessor` is the stage that makes real input look like the data it is compared against. It is
+a separate layer on purpose: the matcher, the scoring and the `AnalyzedCharacter` semantics are the port
+and are untouched. In order:
+
+| Step | Default | What it is for |
+| --- | --- | --- |
+| `MinPointDistance` | 1.0 | Drops duplicate points. A device that reports a point every 10 ms produces long runs of coincident points, which `DistanceTo`-style code divides by. |
+| `SmoothWindow` | 5 | Centred moving average over the captured points. Tremor is the highest-frequency component of the signal; averaging is the cheapest way to take it off without moving the stroke. |
+| `SimplifyEpsilon` | 6.0 | Ramer-Douglas-Peucker. Keeps the points that carry the shape - corners - and discards the ones that are only noise. The tolerance is in data units (1/256 of the character box), so it is scale free. |
+| `ResampleSpacing` | 6.0 | Equidistant re-sampling **that keeps every vertex**: each segment of the simplified polyline is divided into `round(length / spacing)` equal parts. This is what removes the uneven sampling, because a straight run now has `localLength == distFromPrevious` at every step and cannot produce a false pivot. |
+
+The last point is the one worth arguing for. An earlier implementation marched a fixed grid along the
+whole path, which drops every vertex - including corners. That is invisible for Chinese characters (they
+have many strokes, and the alignment still works out) and fatal for Latin letters, where the whole shape
+*is* the corners: an "L" analysed as a single diagonal segment and matched "2". The analyzer only sees a
+corner when one of three consecutive samples sits exactly on it, so filling each segment separately -
+which puts samples on every vertex - is what makes `L`, `4`, `7` and `A` recognizable.
+
+Measured with `tools/data/evaluate.py` and `tools/data/check_alnum.py`, which write characters the way a
+pointing device would (variable speed, correlated tremor, rotation, scale error) and report top-1 / top-5
+accuracy with and without the pipeline:
+
+| Input | top-1 | top-5 |
+| --- | --- | --- |
+| 9507 Chinese characters, median strokes fed straight back | 0% | 0% |
+| the same, through `StrokePreprocessingOptions.Default` | see `tools/data/evaluate.py` | |
+| the 72 alphanumeric glyphs (3 samples each) | 95.4% | 100% |
+
+The tremor model matters as much as the parameters, and getting it wrong is easy: adding *white* noise to
+every sample - which is what a first version of the evaluator did - produces a polyline whose direction
+changes by tens of degrees between neighbouring points. No cleanup stage can be honestly expected to
+remove that, and tuning against it selects settings that only make sense for the model. Real tremor is
+correlated: a hand drifts over roughly a pen-width and wanders slowly. `evaluate.py` therefore low-passes
+the noise over ~12 samples before adding it.
+
+The defaults are tuned for *this* kind of input and are meant to be adjusted, not defended:
+`StrokePreprocessingOptions` is a plain record with init-only properties, so an application that knows its
+input device can turn any step off or retune it. `StrokePreprocessingOptions.None` restores the original
+behaviour exactly.
 
 ## 5. The inverse operation: drawing sub-strokes
 

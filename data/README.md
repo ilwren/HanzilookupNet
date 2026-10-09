@@ -21,6 +21,43 @@ The file is taken verbatim from
 which is generated from [Make Me a Hanzi](https://github.com/skishore/makemeahanzi)'s `graphics.txt` (see
 the `mmah-convert/` tool in that repository).
 
+## `alnum.json` - digits, Latin letters and punctuation
+
+A second, much smaller repository in exactly the same format: **72 characters** - the digits `0-9`, the
+letters `A-Z` and `a-z`, and the ten marks `. , ! ? - + = / ( )` - 272 sub-strokes, 2288 packed bytes. It is not part of `hanzilookup-js`; it is generated here by
+
+```bash
+python3 tools/data/build_alnum.py      # writes data/alnum.json
+python3 tools/data/check_alnum.py      # writes every glyph back and requires it to be recognized
+```
+
+* The stroke shapes live in `tools/data/alnum_templates.py` (unit box, 256 × 256) and are re-sampled to
+  even spacing before they are encoded, so the stored geometry matches what the preprocessing pipeline
+  produces for a real stroke.
+* The **centres are encoded relative to each character's own bounding box**, not to the diagonal of the
+  data set, because these glyphs are normalized to the full box anyway (see `StrokePreprocessor`).
+* Round glyphs (`0`, `O`, `o`, `Q`, `8`) are authored with a deliberate gap where the pen lifts. A
+  perfectly closed loop would have its start and end at the same point, i.e. zero length, and a
+  zero-length sub-stroke scores `NaN` - which would make the character permanently unmatchable.
+* `check_alnum.py` is the gate: it writes each glyph the way a pointing device would (variable speed,
+  tremor, rotation, scale error), runs it through the preprocessing pipeline and requires the matcher to
+  hand the character back out of a repository containing all 72. It reaches **95.4% top-1 / 100% top-5**
+  over 216 simulated handwritings. CI runs it on every push.
+* What it cannot do is tell you the case. The matcher normalizes every character by its own bounding
+  box, so `c`/`C`, `x`/`X`, `s`/`S` are literally the same shape and come back as two entries in the
+  candidate list. The demo has a case selector for that reason.
+
+Loading both repositories at once is one call - `HanziData.Concat` re-bases the byte offsets, so the
+merged repository is a valid repository in its own right:
+
+```csharp
+var merged = HanziData.Concat(HanziData.Load("data/mmah.json"), HanziData.Load("data/alnum.json"));
+var matcher = new Matcher(merged);
+```
+
+The Chinese side keeps its 9507 characters either way; expect `-` and `丨` to compete with `一` and
+`I`, since they *are* the same line.
+
 ## License
 
 The data is derived from the **Arphic PL KaitiM GB** and **Arphic PL UKai** fonts and is redistributed

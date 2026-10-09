@@ -5,7 +5,7 @@
         xmlns:hl="using:HanziLookup.Avalonia"
         mc:Ignorable="d" d:DesignWidth="1160" d:DesignHeight="780"
         x:Class="HanziLookup.Demo.MainWindow"
-        Title="HanziLookup · C# + Avalonia 12 手写汉字识别演示"
+        Title="HanziLookup · C# + Avalonia 12 手写识别演示"
         Width="1160" Height="780"
         MinWidth="920" MinHeight="660"
         Background="#FFF6F7F9">
@@ -14,8 +14,8 @@
 
         <!-- Header -->
         <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Spacing="4" Margin="0,0,0,12">
-            <TextBlock Text="HanziLookup · 手写汉字识别" FontSize="21" FontWeight="SemiBold" />
-            <TextBlock Text="C# 重写 npm 包 hanzilookup-js 1.0.3（HanziLookupJS / Make Me a Hanzi 数据）· 笔迹在写完后会按子笔画分解并匹配"
+            <TextBlock Text="HanziLookup · 手写识别（汉字 / 数字 / 字母）" FontSize="21" FontWeight="SemiBold" />
+            <TextBlock Text="C# 重写 npm 包 hanzilookup-js 1.0.3（汉字数据来自 HanziLookupJS / Make Me a Hanzi；数字与拉丁字母为内置笔画模板）· 笔迹在写完后会按子笔画分解并匹配"
                        FontSize="12" Foreground="#FF5A6572" TextWrapping="Wrap" />
         </StackPanel>
 
@@ -23,7 +23,7 @@
         <Border Grid.Row="1" Grid.Column="0" Background="White" CornerRadius="10" Padding="14"
                 BoxShadow="0 2 10 0 #14000000" VerticalAlignment="Top">
             <StackPanel Spacing="12">
-                <TextBlock Text="在这里手写一个字" FontSize="13" FontWeight="SemiBold" Foreground="#FF3C4450" />
+                <TextBlock Text="在这里手写汉字、数字或字母" FontSize="13" FontWeight="SemiBold" Foreground="#FF3C4450" />
                 <hl:StrokeInputCanvas x:Name="InputCanvas" Width="430" Height="430" HorizontalAlignment="Center" />
 
                 <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
@@ -33,10 +33,20 @@
                     <Button x:Name="StopButton" Content="停止" />
                 </StackPanel>
 
+                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                    <TextBlock Text="字符集" FontSize="12" VerticalAlignment="Center" Foreground="#FF5A6572" />
+                    <ComboBox x:Name="CharacterSetBox" Width="176" VerticalAlignment="Center"
+                              SelectionChanged="OnCharacterSetChanged" />
+                    <TextBlock Text="大小写" FontSize="12" VerticalAlignment="Center" Foreground="#FF5A6572" />
+                    <ComboBox x:Name="CaseBox" Width="94" VerticalAlignment="Center"
+                              SelectionChanged="OnCaseChanged" />
+                </StackPanel>
+
                 <StackPanel Orientation="Horizontal" Spacing="18" HorizontalAlignment="Center">
                     <CheckBox x:Name="GuidesCheckBox" Content="米字格" IsChecked="True" />
                     <CheckBox x:Name="AnalysisCheckBox" Content="显示笔画分析（骨架 / 转折点 / 包围盒）" IsChecked="True" />
                     <CheckBox x:Name="StrictCheckBox" Content="过滤未比较的候选" />
+                    <CheckBox x:Name="SmoothCheckBox" Content="笔画平滑（关闭=原始输入）" IsChecked="True" />
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">

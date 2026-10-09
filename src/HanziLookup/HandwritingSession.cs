@@ -75,6 +75,25 @@ public sealed class HandwritingSession
     /// <summary>Options for the next match run.</summary>
     public MatchOptions Options { get; set; } = MatchOptions.Default;
 
+    /// <summary>
+    /// How captured strokes are cleaned up before they are analysed, or <c>null</c> to hand them to
+    /// the analyzer untouched.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The default (<see cref="StrokePreprocessingOptions.Default"/>) is what makes interactive
+    /// recognition usable: raw pointer samples carry tremor and uneven spacing, and the analyzer
+    /// reacts to both by cutting strokes into far more sub-strokes than the character data has,
+    /// after which the right character is no longer even a candidate.  Set this to
+    /// <see cref="StrokePreprocessingOptions.None"/> to reproduce the raw behaviour.
+    /// </para>
+    /// <para>
+    /// Preprocessing runs at analysis time, not at capture time: <see cref="Strokes"/> always holds
+    /// exactly what was drawn, so changing this setting re-analyses what is already on the canvas.
+    /// </para>
+    /// </remarks>
+    public StrokePreprocessingOptions? Preprocessing { get; set; } = StrokePreprocessingOptions.Default;
+
     /// <summary>When true (the default) every added, removed or cleared stroke triggers a match run.</summary>
     public bool AutoRecognize { get; set; } = true;
 
@@ -104,13 +123,7 @@ public sealed class HandwritingSession
     {
         ArgumentNullException.ThrowIfNull(stroke);
         Strokes.Add(stroke);
-        Analysis = AnalyzedCharacter.FromStrokes(Strokes);
-        Changed?.Invoke(this, EventArgs.Empty);
-
-        if (AutoRecognize)
-        {
-            Recognize();
-        }
+        RecognizeOrAnalyze();
     }
 
     /// <summary>Adds several captured strokes at once.</summary>
@@ -122,12 +135,18 @@ public sealed class HandwritingSession
             Strokes.Add(stroke);
         }
 
-        Analysis = AnalyzedCharacter.FromStrokes(Strokes);
-        Changed?.Invoke(this, EventArgs.Empty);
+        RecognizeOrAnalyze();
+    }
 
+    private void RecognizeOrAnalyze()
+    {
         if (AutoRecognize)
         {
             Recognize();
+        }
+        else
+        {
+            Analyze();
         }
     }
 
@@ -140,13 +159,7 @@ public sealed class HandwritingSession
         }
 
         Strokes.RemoveAt(Strokes.Count - 1);
-        Analysis = AnalyzedCharacter.FromStrokes(Strokes);
-        Changed?.Invoke(this, EventArgs.Empty);
-
-        if (AutoRecognize)
-        {
-            Recognize();
-        }
+        RecognizeOrAnalyze();
 
         return true;
     }
@@ -162,11 +175,18 @@ public sealed class HandwritingSession
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>Analyzes the current strokes without matching them.</summary>
+    /// <summary>
+    /// Analyzes the current strokes without matching them, applying <see cref="Preprocessing"/>.
+    /// </summary>
     public AnalyzedCharacter Analyze()
     {
-        var analysis = AnalyzedCharacter.FromStrokes(Strokes);
+        var strokes = Preprocessing is null || !Preprocessing.IsEnabled
+            ? Strokes
+            : StrokePreprocessor.Process(Strokes, Preprocessing);
+
+        var analysis = AnalyzedCharacter.FromStrokes(strokes);
         Analysis = analysis;
+        Changed?.Invoke(this, EventArgs.Empty);
         return analysis;
     }
 

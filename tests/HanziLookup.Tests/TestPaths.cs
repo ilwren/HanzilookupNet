@@ -10,6 +10,9 @@ internal static class TestPaths
 
     public static string DataFile => Path.Combine(TestDataDirectory, "mmah.json");
 
+    /// <summary>The digits / Latin letters / punctuation repository.</summary>
+    public static string AlphanumericFile => Path.Combine(TestDataDirectory, "alnum.json");
+
     public static string ReferenceVectorsFile => Path.Combine(TestDataDirectory, "reference-vectors.json");
 
     /// <summary>Throws a helpful exception when an input file is missing.</summary>

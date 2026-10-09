@@ -157,6 +157,77 @@ public sealed class HanziData
         return new ReadOnlySpan<byte>(_subStrokes, offset, length);
     }
 
+    /// <summary>
+    /// Merges several repositories into one, so that a single <see cref="Matcher"/> can search all
+    /// of them at once.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is what makes it possible to recognize, for example, Chinese characters and digits with
+    /// the same matcher: the packed table of each repository is appended to the next one and the
+    /// character rows are re-pointed at their new offsets.  Because the matcher aligns sub-stroke
+    /// sequences with skip penalties, searching one combined repository is not the same as searching
+    /// the repositories separately and merging the results - a candidate survives the competition of
+    /// the whole set rather than only of its own script.
+    /// </para>
+    /// <para>
+    /// Characters are kept in the order they are given; when the same character appears in more than
+    /// one repository the first one wins, so put the preferred repository first.
+    /// </para>
+    /// </remarks>
+    /// <param name="repositories">The repositories to merge, in order.</param>
+    public static HanziData Concat(params HanziData[] repositories)
+    {
+        ArgumentNullException.ThrowIfNull(repositories);
+        return Concat((IEnumerable<HanziData>)repositories);
+    }
+
+    /// <summary>Merges several repositories into one, so that a single <see cref="Matcher"/> can search all of them.</summary>
+    /// <param name="repositories">The repositories to merge, in order.</param>
+    public static HanziData Concat(IEnumerable<HanziData> repositories)
+    {
+        ArgumentNullException.ThrowIfNull(repositories);
+
+        var characters = new List<HanziCharacter>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var table = new List<byte>();
+        var count = 0;
+
+        foreach (var repository in repositories)
+        {
+            if (repository is null)
+            {
+                throw new ArgumentException("The repository list contains null.", nameof(repositories));
+            }
+
+            foreach (var character in repository.CharacterArray)
+            {
+                if (!seen.Add(character.Character))
+                {
+                    continue;
+                }
+
+                var bytes = repository.GetSubStrokeBytes(character);
+                if (bytes.Length != character.SubStrokeCount * 3)
+                {
+                    throw new InvalidOperationException(
+                        $"Character '{character.Character}' claims {character.SubStrokeCount} sub-strokes " +
+                        "but its data is out of range; the repository looks corrupt.");
+                }
+
+                characters.Add(new HanziCharacter(
+                    character.Character,
+                    character.StrokeCount,
+                    character.SubStrokeCount,
+                    count));
+                table.AddRange(bytes.ToArray());
+                count += bytes.Length;
+            }
+        }
+
+        return new HanziData(characters, table.ToArray());
+    }
+
     private static HanziData FromJsonDocument(JsonDocument document)
     {
         var root = document.RootElement;

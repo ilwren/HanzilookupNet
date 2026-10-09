@@ -70,6 +70,12 @@ jobs:
           dotnet build src/HanziLookup.Demo/HanziLookup.Demo.csproj -c ${{ env.Configuration }}
           -p:HanziLookupAppTargetFramework=net8.0
 
+      - name: Check the alphanumeric repository round trips
+        # `check_alnum.py` writes every one of the 72 glyphs the way a pointing device would and
+        # requires the matcher to hand it back.  It is the only guard that the data we ship is
+        # recognizable rather than merely well formed.
+        run: python3 tools/data/check_alnum.py
+
       - name: Report failing tests as annotations
         # The test log lives on blob storage, which is not reachable from every environment, so
         # mirror the failures into check-run annotations, which are readable through the REST API.

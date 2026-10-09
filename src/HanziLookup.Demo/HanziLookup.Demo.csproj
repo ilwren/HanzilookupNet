@@ -29,9 +29,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- The recognizer data file is copied next to the executable; the app also looks for it in the
-         repository layout, so "dotnet run" works without copying. -->
+    <!-- The recognizer data files are copied next to the executable; the app also looks for them in
+         the repository layout, so "dotnet run" works without copying. -->
     <None Include="..\..\data\mmah.json" Link="data/mmah.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\data\alnum.json" Link="data/alnum.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

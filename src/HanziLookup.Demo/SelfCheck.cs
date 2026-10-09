@@ -67,7 +67,16 @@ internal static class SelfCheck
         var failures = 0;
 
         var status = window.GetControl<TextBlock>("StatusText").Text ?? string.Empty;
-        Report("data file loaded", status.Contains("9507", StringComparison.Ordinal), status, ref failures);
+        Report(
+            "chinese data file loaded",
+            status.Contains("9507", StringComparison.Ordinal),
+            status,
+            ref failures);
+        Report(
+            "alphanumeric data file loaded",
+            status.Contains(DataFileLocator.AlphanumericFileName, StringComparison.Ordinal),
+            status,
+            ref failures);
         Report(
             "window is visible and sized",
             window.IsVisible && window.Bounds.Width > 100 && window.Bounds.Height > 100,
