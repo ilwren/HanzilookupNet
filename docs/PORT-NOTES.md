@@ -89,6 +89,7 @@ the decoder total instead of producing an index-out-of-range exception.
 | 6 | `StrokePreprocessor` and `HandwritingSession.Preprocessing` exist, and are **on by default**. They rewrite the captured polyline before it is analysed. | The ported algorithm is unchanged and still used verbatim; this is an input stage in front of it (section 4a). A pointing device reports fast, unevenly sampled, shaky input, which the analyzer - which assumes the evenly sampled median strokes of `mmah.json` - turns into 100+ sub-strokes per character. Without it, nothing recognisable is ever drawn. |
 | 7 | `HandwritingSession.Strokes` holds exactly what was drawn, and preprocessing happens when the analysis is built, not when a stroke arrives. | Re-processing after every change would be wasted work, and callers who want the raw input (playback, export, the analysis overlay) should not have to fight the session for it. |
 | 8 | `data/alnum.json` - 72 digits, Latin letters and punctuation - ships next to `mmah.json`, and `HanziData.Concat` merges the two. | The matcher normalizes each character by its own bounding box and has no notion of script, so a second repository is all that is needed to recognize digits and letters; merging is just a table concatenation with re-based offsets. |
+| 9 | `Matcher` retries **without** the pre-filter when the first pass returned nothing usable (only `-Infinity` entries or an empty list). | "Not even a candidate" is the worst answer an interactive recognizer can give, and it is exactly what a character written without lifting the pen (连笔) produces. When the fast pass works, the result is bit-for-bit what the original returns - the reference vectors are unaffected. |
 
 ## 4a. The preprocessing layer: making real handwriting look like the data
 
@@ -145,6 +146,38 @@ The defaults are tuned for *this* kind of input and are meant to be adjusted, no
 `StrokePreprocessingOptions` is a plain record with init-only properties, so an application that knows its
 input device can turn any step off or retune it. `StrokePreprocessingOptions.None` restores the original
 behaviour exactly.
+
+## 4b. Connected strokes (连笔): what works, what does not
+
+Writing a character without lifting the pen is the one case this algorithm cannot handle, and it is
+worth being precise about why, because the obvious fixes do not work.
+
+A character in `mmah.json` records where the pen went down and where it came up, and the matcher uses
+that: a one-stroke input is only compared with one-stroke characters at the default looseness (with
+9507 characters, exactly 8 of them). A character written in one drag is *one* stroke holding all of
+its sub-strokes, so it is compared against the wrong population and the best match is unrelated -
+乙, 乛, 丿, whatever the geometry happens to resemble.
+
+Three ways to recover it were built and measured (24 characters written as one continuous drag,
+`tools/data/evaluate.py`, candidate repository of 9507):
+
+| Attempt | Result |
+| --- | --- |
+| Split where the pen paused (points closer together than the stroke's median spacing) | 0%. Devices that report on a timer produce the same signature for tremor, and the detector cuts ordinary strokes as well: a 10-stroke character came back as 2.7 strokes. |
+| Split at direction reversals (a pen that doubles back has turned more than 150°) | 0%, and normal writing dropped from 81% to 2%. Chinese characters contain genuine sharp turns - 乙, 5, 亅, 匕, the hook of 了 - so this cuts good input as reliably as it rescues bad input. |
+| Split at every pivot of the analyzed stroke, keeping the best-scoring split | 0%. The connector between two strokes is geometry no character has, and whichever way the stroke is cut, one half keeps a piece of it. |
+
+So the honest answer is that this is not fixable in front of the matcher, and the fix that does work
+is at the other end: **make sure the user always gets candidates**. Before, such an input produced a
+list of entries that were never really compared (score `-Infinity`) - i.e. nothing. `Matcher` now
+retries without the pre-filter when the fast pass produced nothing usable, so a connected stroke
+returns eight scored characters instead of none. They are rarely the character intended, but the user
+can pick from them, which they could not before.
+
+If 连笔 has to be recognized properly rather than merely survived, the recognizer needs a different
+model: pen-up segmentation from pen dynamics and direction features, as the online handwriting
+recognition literature does, or a stroke-based network trained on connected samples. That is a
+different recognizer, not a preprocessing stage.
 
 ## 5. The inverse operation: drawing sub-strokes
 

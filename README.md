@@ -183,6 +183,34 @@ session.Preprocessing = StrokePreprocessingOptions.Default with { SimplifyEpsilo
 The numbers are measured, not estimated: `tools/data/evaluate.py` and `tools/data/check_alnum.py` write
 characters the way a hand would and report what comes back, and the latter runs in CI on every push.
 
+### Writing without lifting the pen (连笔)
+
+A character written in one continuous drag arrives as *one* stroke holding all of its sub-strokes. The
+data records where the pen went down, so a one-stroke input is only compared with one-stroke characters
+- of 9507, exactly eight. The result used to be a list of candidates that were never really compared,
+i.e. nothing at all. **The matcher now always answers with something**: when the fast pass finds no
+usable candidate it retries without the pre-filter, so a connected stroke returns eight scored
+characters instead of none.
+
+They are rarely the character you meant, though, and no cheap fix changes that. Splitting at pauses,
+splitting at direction reversals and splitting at every pivot were all built and measured: all three
+score 0% on connected writing, and the first two damage ordinary writing as well (81% → 2% for
+reversal splitting), because a pause or a sharp turn that separates two strokes also occurs *inside* a
+single one. The reason none of them work is structural - the connector between two strokes is
+geometry no character has, and however the stroke is cut, one half keeps a piece of it. Details and
+numbers in [`docs/PORT-NOTES.md`](docs/PORT-NOTES.md#4b-connected-strokes-连笔-what-works-what-does-not);
+recognizing 连笔 properly needs pen-dynamics segmentation, which is a different recognizer rather than a
+preprocessing stage.
+
+### Characters that look alike
+
+`2` and `z`, `1` and `|` are the same shape up to a few degrees, and the matcher normalizes every
+character by its own bounding box - so where the only difference is a curve that a hurried hand writes
+flat, there is nothing left to tell them apart, and the same is true of `c`/`C` and `s`/`S` by
+construction. Both members of a pair do come back in the candidate list (the demo shows up to 20), and
+the demo's case selector picks the reading you meant; beyond that, the answer is a list, not a single
+character.
+
 ### Digits, Latin letters and punctuation
 
 `data/alnum.json` is a second repository in the same format - 72 characters: `0-9`, `A-Z`, `a-z` and
@@ -259,7 +287,20 @@ CI 每次推送都会跑。识别器本身不区分文种，两份字库直接�
 var both = new Matcher(HanziData.Concat(HanziData.Load("data/mmah.json"), HanziData.Load("data/alnum.json")));
 ```
 
-演示程序里用下拉框在 汉字 / 数字·字母·标点 / 全部 之间切换。合并字库里 `-`、`丨` 会和 `一`、`I` 争候选
+**连笔与相似字**：汉字数据里记录了每一笔的起笔与收笔位置，所以默认宽松度下“一笔”的输入只会和
+“一笔”的候选比较（全库 9507 个里只有 8 个）。连笔写出来的字正好是“一笔里塞了所有子笔画”，以前的结果是
+一串“从未真正比较过”的候选（得分为 -Infinity），也就是**什么都没有**。现在匹配器保证一定有结果：快速通道
+找不到可用候选时会关掉预过滤重扫一遍，于是连笔也能返回 8 个带分数的候选，而不是空白。
+
+不过这几个候选通常不是你想要的字，而且没有便宜的办法能解决：按停顿切分、按方向反转切分、按所有转折点
+逐个试切分都做过实测，连笔上全是 0%，前两种还会把正常书写弄坏（按反转切分会让正常书写从 81% 掉到 2%）
+——因为“该断笔的地方”同样会出现在一笔中间；根本原因是两笔之间的连接段是任何汉字都没有的几何，无论
+怎么切，总有一半会留下一截。详见 `docs/PORT-NOTES.md` 第 4b 节。要真正支持连笔需要基于笔尖动态的切分
+（另一类识别器），而不是在匹配前加一层预处理。
+
+`2` 与 `z`、`1` 与 `|` 这类：形状本来就只差一点点，而匹配器按各自包围盒归一化——写得潦草时那点曲率差
+被抹平之后就没有可分的特征了（`c`/`C`、`s`/`S` 更是按定义完全相同）。两个候选都会出现在候选列表里
+（演示程序最多显示 20 个），大小写选择框可以指定你要的那个；再往上就只能是列表而不是唯一结果。合并字库里 `-`、`丨` 会和 `一`、`I` 争候选
 （它们本来就是同一根线）；字母大小写则无法区分——匹配器按各自包围盒归一化，`c`/`C`、`s`/`S` 几何完全相同，
 所以演示程序提供了一个大小写选择框。
 
